@@ -1,6 +1,11 @@
 package com.emp.proj.employee_register.entities;
 
-import jakarta.persistence.*;
+import jakarta.persistence.Column;
+import jakarta.persistence.Entity;
+import jakarta.persistence.GeneratedValue;
+import jakarta.persistence.GenerationType;
+import jakarta.persistence.Id;
+import jakarta.persistence.Table;
 import lombok.AllArgsConstructor;
 
 @Entity
@@ -21,13 +26,11 @@ public class User {
     @Column(unique = true)
     private String email;
 
-    private String role; // "ADMIN" or "USER"
+    private String role;
 
-    // Default constructor required by JPA
     public User() {
     }
 
-    // Constructor without ID for entity creation
     public User(String userName, String password, String email, String role) {
         this.userName = userName;
         this.password = password;
@@ -35,7 +38,6 @@ public class User {
         this.role = role;
     }
 
-    // Getters and setters
     public Integer getUserId() {
         return userId;
     }

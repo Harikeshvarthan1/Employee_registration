@@ -27,14 +27,12 @@ const EmployeeStats: React.FC<EmployeeStatsProps> = ({
   showDetails = true,
   onViewAllClick,
 }) => {
-  // Data states
   const [employees, setEmployees] = useState<Employee[]>([]);
   const [activeEmployees, setActiveEmployees] = useState<Employee[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
   const [refreshing, setRefreshing] = useState<boolean>(false);
 
-  // UI states
   const [activeTab, setActiveTab] = useState<
     "overview" | "departments" | "trends"
   >("overview");
@@ -44,11 +42,9 @@ const EmployeeStats: React.FC<EmployeeStatsProps> = ({
   const [expandedChart, setExpandedChart] = useState<string | null>(null);
   const [highlightedStat, setHighlightedStat] = useState<string | null>(null);
 
-  // Animation refs
   const statsRef = useRef<HTMLDivElement>(null);
   const navigate = useNavigate();
 
-  // Fetch employee data
   useEffect(() => {
     const fetchData = async () => {
       setLoading(true);
@@ -73,7 +69,6 @@ const EmployeeStats: React.FC<EmployeeStatsProps> = ({
     fetchData();
   }, []);
 
-  // Refresh data
   const refreshData = async () => {
     if (refreshing) return;
 
@@ -87,7 +82,6 @@ const EmployeeStats: React.FC<EmployeeStatsProps> = ({
       setEmployees(allEmps);
       setActiveEmployees(activeEmps);
 
-      // Show success animation
       if (statsRef.current) {
         statsRef.current.classList.add("refresh-success");
         setTimeout(() => {
@@ -104,7 +98,6 @@ const EmployeeStats: React.FC<EmployeeStatsProps> = ({
     }
   };
 
-  // Navigate to employees page
   const handleViewAllClick = () => {
     if (onViewAllClick) {
       onViewAllClick();
@@ -113,26 +106,21 @@ const EmployeeStats: React.FC<EmployeeStatsProps> = ({
     }
   };
 
-  // Highlight a stat when hovered
   const handleStatHover = (statId: string | null) => {
     setHighlightedStat(statId);
   };
 
-  // Toggle chart expansion
   const toggleChartExpansion = (chartId: string) => {
     setExpandedChart(expandedChart === chartId ? null : chartId);
   };
 
-  // Calculate employee statistics
   const calculateStats = () => {
     if (!employees.length) return null;
 
-    // Active vs. inactive count
     const activeCount = activeEmployees.length;
     const inactiveCount = employees.length - activeCount;
     const activePercentage = Math.round((activeCount / employees.length) * 100);
 
-    // Department distribution
     const departments = employees.reduce(
       (acc: { [key: string]: number }, emp) => {
         const role = emp.role || "Unassigned";
@@ -142,7 +130,6 @@ const EmployeeStats: React.FC<EmployeeStatsProps> = ({
       {}
     );
 
-    // Recent hires (last 30 days)
     const thirtyDaysAgo = new Date();
     thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
 
@@ -151,11 +138,9 @@ const EmployeeStats: React.FC<EmployeeStatsProps> = ({
       return joinDate >= thirtyDaysAgo;
     });
 
-    // Calculate average salary
     const totalSalary = employees.reduce((sum, emp) => sum + emp.baseSalary, 0);
     const averageSalary = employees.length ? totalSalary / employees.length : 0;
 
-    // Calculate highest and lowest salary
     const sortedBySalary = [...employees].sort(
       (a, b) => b.baseSalary - a.baseSalary
     );
@@ -180,7 +165,6 @@ const EmployeeStats: React.FC<EmployeeStatsProps> = ({
     };
   };
 
-  // Prepare chart data for role distribution
   const getDepartmentData = () => {
     const stats = calculateStats();
     if (!stats) return [];
@@ -188,13 +172,10 @@ const EmployeeStats: React.FC<EmployeeStatsProps> = ({
     return Object.entries(stats.departments)
       .map(([name, value]) => ({ name, value }))
       .sort((a, b) => b.value - a.value)
-      .slice(0, 5); // Top 5 departments
+      .slice(0, 5);
   };
 
-  // Sample data for monthly employee count trend
   const getTrendData = () => {
-    // In a real app, this would come from historical data
-    // Mocking some data for demonstration
     const months = ["Jan", "Feb", "Mar", "Apr", "May", "Jun"];
 
     return months.map((month) => ({
@@ -204,18 +185,15 @@ const EmployeeStats: React.FC<EmployeeStatsProps> = ({
     }));
   };
 
-  // Format currency
-const formatCurrency = (amount: number): string => {
-  return new Intl.NumberFormat("en-IN", {
-    style: "currency",
-    currency: "INR",
-    minimumFractionDigits: 0,
-    maximumFractionDigits: 0,
-  }).format(amount);
-};
+  const formatCurrency = (amount: number): string => {
+    return new Intl.NumberFormat("en-IN", {
+      style: "currency",
+      currency: "INR",
+      minimumFractionDigits: 0,
+      maximumFractionDigits: 0,
+    }).format(amount);
+  };
 
-
-  // Colors for charts
   const CHART_COLORS = [
     "#4361ee",
     "#3a0ca3",
@@ -225,7 +203,6 @@ const formatCurrency = (amount: number): string => {
     "#4895ef",
   ];
 
-  // Get stats
   const stats = calculateStats();
 
   return (

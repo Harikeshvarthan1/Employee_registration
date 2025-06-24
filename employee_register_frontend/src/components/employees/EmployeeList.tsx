@@ -16,16 +16,13 @@ const EmployeeList: React.FC<EmployeeListProps> = ({
   onEditEmployee,
   onAddEmployee,
 }) => {
-  // Main data states
   const [employees, setEmployees] = useState<Employee[]>([]);
   const [filteredEmployees, setFilteredEmployees] = useState<Employee[]>([]);
 
-  // UI states
   const [isLoading, setIsLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
   const [viewMode, setViewMode] = useState<"grid" | "list">("grid");
 
-  // Filter states
   const [searchTerm, setSearchTerm] = useState<string>("");
   const [statusFilter, setStatusFilter] = useState<
     "all" | "active" | "inactive"
@@ -33,43 +30,36 @@ const EmployeeList: React.FC<EmployeeListProps> = ({
   const [roleFilter, setRoleFilter] = useState<string>("");
   const [sortOption, setSortOption] = useState<string>("nameAsc");
 
-  // Delete modal states
   const [showDeleteConfirm, setShowDeleteConfirm] = useState<boolean>(false);
   const [employeeToDelete, setEmployeeToDelete] = useState<Employee | null>(
     null
   );
 
-  // Role list for filter dropdown
   const [uniqueRoles, setUniqueRoles] = useState<string[]>([]);
 
   const navigate = useNavigate();
 
-  // Load all employees on component mount
   useEffect(() => {
     loadEmployees();
   }, []);
 
-  // Load employees from the API
   const loadEmployees = async () => {
     setIsLoading(true);
     setError(null);
 
     try {
       const data = await getAllEmployees();
-      console.log(`Loaded ${data.length} employees`);
 
       setEmployees(data);
       extractUniqueRoles(data);
       applyFilters(data);
       setIsLoading(false);
     } catch (err: any) {
-      console.error("Error loading employees:", err);
       setError(err.message || "Failed to load employees");
       setIsLoading(false);
     }
   };
 
-  // Extract unique roles for the filter dropdown
   const extractUniqueRoles = (data: Employee[]) => {
     const roles = Array.from(
       new Set(data.map((emp) => emp.role).filter(Boolean))
@@ -77,12 +67,10 @@ const EmployeeList: React.FC<EmployeeListProps> = ({
     setUniqueRoles(roles);
   };
 
-  // Apply all filters to the employee data
   const applyFilters = useCallback(
     (data: Employee[] = employees) => {
       let result = [...data];
 
-      // Search term filter
       if (searchTerm.trim()) {
         const term = searchTerm.toLowerCase();
         result = result.filter(
@@ -94,17 +82,14 @@ const EmployeeList: React.FC<EmployeeListProps> = ({
         );
       }
 
-      // Status filter
       if (statusFilter !== "all") {
         result = result.filter((emp) => emp.status === statusFilter);
       }
 
-      // Role filter
       if (roleFilter) {
         result = result.filter((emp) => emp.role === roleFilter);
       }
 
-      // Sort the filtered results
       switch (sortOption) {
         case "nameAsc":
           result.sort((a, b) => a.name.localeCompare(b.name));
@@ -139,12 +124,10 @@ const EmployeeList: React.FC<EmployeeListProps> = ({
     [employees, searchTerm, statusFilter, roleFilter, sortOption]
   );
 
-  // Update filters when any filter changes
   useEffect(() => {
     applyFilters();
   }, [applyFilters, searchTerm, statusFilter, roleFilter, sortOption]);
 
-  // Reset all filters
   const resetFilters = () => {
     setSearchTerm("");
     setStatusFilter("all");
@@ -152,19 +135,16 @@ const EmployeeList: React.FC<EmployeeListProps> = ({
     setSortOption("nameAsc");
   };
 
-  // Show delete confirmation modal
   const confirmDelete = (employee: Employee) => {
     setEmployeeToDelete(employee);
     setShowDeleteConfirm(true);
   };
 
-  // Cancel delete
   const cancelDelete = () => {
     setEmployeeToDelete(null);
     setShowDeleteConfirm(false);
   };
 
-  // Handle employee deletion
   const handleDelete = async () => {
     if (!employeeToDelete || !employeeToDelete.id) return;
 
@@ -172,9 +152,7 @@ const EmployeeList: React.FC<EmployeeListProps> = ({
 
     try {
       await deleteEmployee(employeeToDelete.id);
-      console.log(`Deleted employee with ID: ${employeeToDelete.id}`);
 
-      // Update local state
       setEmployees((prev) =>
         prev.filter((emp) => emp.id !== employeeToDelete.id)
       );
@@ -184,33 +162,27 @@ const EmployeeList: React.FC<EmployeeListProps> = ({
       setEmployeeToDelete(null);
       setIsLoading(false);
     } catch (err: any) {
-      console.error(`Error deleting employee:`, err);
       setError(err.message || "Failed to delete employee");
       setIsLoading(false);
     }
   };
   
-  // Edit employee handler
   const handleEdit = (employee: Employee) => {
     if (onEditEmployee) {
       onEditEmployee(employee);
     } else {
-      // If no callback provided, navigate to edit page
       navigate(`/employees/edit/${employee.id}`);
     }
   };
 
-  // Add new employee handler
   const handleAddEmployee = () => {
     if (onAddEmployee) {
       onAddEmployee();
     } else {
-      // If no callback provided, navigate to add page
       navigate("/employees/add");
     }
   };
 
-  // Get statistics
   const getActiveEmployeeCount = () => {
     return employees.filter((emp) => emp.status === "active").length;
   };
@@ -225,7 +197,6 @@ const EmployeeList: React.FC<EmployeeListProps> = ({
       .reduce((total, emp) => total + emp.baseSalary, 0);
   };
 
-  // Format date for display
   const formatDate = (dateString: string | Date): string => {
     if (!dateString) return "N/A";
 
@@ -237,7 +208,6 @@ const EmployeeList: React.FC<EmployeeListProps> = ({
     });
   };
 
-  // Format currency
   const formatCurrency = (amount: number): string => {
     return new Intl.NumberFormat("en-IN", {
       style: "currency",
@@ -249,7 +219,6 @@ const EmployeeList: React.FC<EmployeeListProps> = ({
 
   return (
     <div className="employee-list-container">
-      {/* Header Section */}
       <div className="employee-list-header">
         <div className="header-title">
           <h2>
@@ -270,7 +239,6 @@ const EmployeeList: React.FC<EmployeeListProps> = ({
         </div>
       </div>
 
-      {/* Statistics Cards */}
       <div className="stats-container">
         <div className="stat-card total-employees">
           <div className="stat-icon">
@@ -315,7 +283,6 @@ const EmployeeList: React.FC<EmployeeListProps> = ({
         </div>
       </div>
 
-      {/* Search & Filter Section */}
       <div className="filter-section">
         <div className="search-container">
           <div className="search-input-wrapper">
@@ -403,7 +370,6 @@ const EmployeeList: React.FC<EmployeeListProps> = ({
         </div>
       </div>
 
-      {/* Filter Status and Reset */}
       {(searchTerm || statusFilter !== "all" || roleFilter) && (
         <div className="active-filters">
           <div className="filters-applied">
@@ -447,7 +413,6 @@ const EmployeeList: React.FC<EmployeeListProps> = ({
         </div>
       )}
 
-      {/* Loading State */}
       {isLoading && (
         <div className="loading-container">
           <div className="spinner">
@@ -458,7 +423,6 @@ const EmployeeList: React.FC<EmployeeListProps> = ({
         </div>
       )}
 
-      {/* Error State */}
       {error && !isLoading && (
         <div className="error-container">
           <div className="error-icon">
@@ -472,7 +436,6 @@ const EmployeeList: React.FC<EmployeeListProps> = ({
         </div>
       )}
 
-      {/* Empty State */}
       {!isLoading && !error && employees.length === 0 && (
         <div className="empty-state">
           <div className="empty-icon">
@@ -486,7 +449,6 @@ const EmployeeList: React.FC<EmployeeListProps> = ({
         </div>
       )}
 
-      {/* No Results State */}
       {!isLoading &&
         !error &&
         employees.length > 0 &&
@@ -503,7 +465,6 @@ const EmployeeList: React.FC<EmployeeListProps> = ({
           </div>
         )}
 
-      {/* Employee List */}
       {!isLoading && !error && filteredEmployees.length > 0 && (
         <div
           className={`employees-container ${
@@ -517,13 +478,11 @@ const EmployeeList: React.FC<EmployeeListProps> = ({
                 employee.status === "inactive" ? "inactive" : ""
               }`}
             >
-              {/* Status Badge */}
               <div className={`status-badge ${employee.status}`}>
                 {employee.status === "active" ? "Active" : "Inactive"}
               </div>
 
               <div className="employee-card-content">
-                {/* Avatar and Basic Info */}
                 <div className="employee-primary-info">
                   <div className="employee-avatar">
                     <div className="avatar-circle">
@@ -541,7 +500,6 @@ const EmployeeList: React.FC<EmployeeListProps> = ({
                   </div>
                 </div>
 
-                {/* Detailed Info */}
                 <div className="employee-details">
                   <div className="detail-item">
                     <i className="bi bi-telephone"></i>
@@ -564,7 +522,6 @@ const EmployeeList: React.FC<EmployeeListProps> = ({
                   </div>
                 </div>
 
-                {/* Action Buttons */}
                 <div className="employee-actions">
                   <button
                     className="action-btn edit-btn"
@@ -590,13 +547,11 @@ const EmployeeList: React.FC<EmployeeListProps> = ({
         </div>
       )}
 
-      {/* Floating Add Button for Mobile */}
       <button className="floating-add-btn" onClick={handleAddEmployee}>
         <i className="bi bi-plus-lg"></i>
         <span className="tooltip">Add Employee</span>
       </button>
 
-      {/* Delete Confirmation Modal */}
       {showDeleteConfirm && (
         <div className="modal-overlay">
           <div className="modal-container delete-modal">

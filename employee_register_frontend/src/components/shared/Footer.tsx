@@ -10,13 +10,11 @@ const Footer: React.FC = () => {
     <footer className="main-footer">
       <div className="footer-container">
         <div className="footer-content">
-          {/* About Section */}
           <div className="footer-section">
             <h5>About EMS</h5>
             <p>Employee Management System helps organizations efficiently manage workforce, attendance, salaries, and loan processes in one place.</p>
           </div>
 
-          {/* Quick Links Section */}
           <div className="footer-section">
             <h5>Quick Links</h5>
             <ul className="footer-links">
@@ -27,7 +25,6 @@ const Footer: React.FC = () => {
             </ul>
           </div>
 
-          {/* Support Information */}
           <div className="footer-section">
             <h5>Support</h5>
             <ul className="contact-info">
@@ -37,7 +34,6 @@ const Footer: React.FC = () => {
             </ul>
           </div>
 
-          {/* Resources Section */}
           <div className="footer-section">
             <h5>Resources</h5>
             <ul className="footer-links">

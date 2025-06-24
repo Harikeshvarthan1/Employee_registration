@@ -1,8 +1,15 @@
 package com.emp.proj.employee_register.entities;
 
-import jakarta.persistence.*;
-import lombok.AllArgsConstructor;
 import java.util.Date;
+
+import jakarta.persistence.Entity;
+import jakarta.persistence.GeneratedValue;
+import jakarta.persistence.GenerationType;
+import jakarta.persistence.Id;
+import jakarta.persistence.Table;
+import jakarta.persistence.Temporal;
+import jakarta.persistence.TemporalType;
+import lombok.AllArgsConstructor;
 
 @Entity
 @AllArgsConstructor
@@ -22,13 +29,11 @@ public class Employee {
     private Date joinDate;
 
     private Double baseSalary;
-    private String status; // "active" or "inactive"
+    private String status; 
 
-    // Default constructor required by JPA
     public Employee() {
     }
 
-    // Constructor without ID for entity creation
     public Employee(String name, String phoneNo, String address, String role,
                     Date joinDate, Double baseSalary, String status) {
         this.name = name;
@@ -40,7 +45,6 @@ public class Employee {
         this.status = status;
     }
 
-    // Getters and setters
     public Integer getId() {
         return id;
     }

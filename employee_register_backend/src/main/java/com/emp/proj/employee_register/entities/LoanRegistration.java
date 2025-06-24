@@ -1,8 +1,16 @@
 package com.emp.proj.employee_register.entities;
 
-import jakarta.persistence.*;
-import lombok.AllArgsConstructor;
 import java.util.Date;
+
+import jakarta.persistence.Column;
+import jakarta.persistence.Entity;
+import jakarta.persistence.GeneratedValue;
+import jakarta.persistence.GenerationType;
+import jakarta.persistence.Id;
+import jakarta.persistence.Table;
+import jakarta.persistence.Temporal;
+import jakarta.persistence.TemporalType;
+import lombok.AllArgsConstructor;
 
 @Entity
 @AllArgsConstructor
@@ -26,13 +34,11 @@ public class LoanRegistration {
 
     private String reason;
 
-    private String status; // "active" or "inactive"
+    private String status; 
 
-    // Default constructor required by JPA
     public LoanRegistration() {
     }
 
-    // Constructor without ID for entity creation
     public LoanRegistration(Integer employeeId, Date loanDate,
                             Double loanAmount, String reason, String status) {
         this.employeeId = employeeId;
@@ -42,7 +48,6 @@ public class LoanRegistration {
         this.status = status;
     }
 
-    // Getters and setters
     public Integer getLoanId() {
         return loanId;
     }

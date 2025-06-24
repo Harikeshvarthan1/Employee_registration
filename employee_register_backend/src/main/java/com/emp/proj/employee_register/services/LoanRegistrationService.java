@@ -23,7 +23,7 @@ public class LoanRegistrationService implements ILoanRegistrationService {
     @Override
     @Transactional
     public LoanRegistration registerLoan(LoanRegistration loanRegistration) {
-        // Validate employee exists and is active
+        
         Employee employee = employeeRepository.findById(loanRegistration.getEmployeeId())
                 .orElseThrow(() -> new RuntimeException("Employee not found with id: " + loanRegistration.getEmployeeId()));
 
@@ -31,17 +31,14 @@ public class LoanRegistrationService implements ILoanRegistrationService {
             throw new RuntimeException("Cannot register loan for inactive employee");
         }
 
-        // Set current date if not provided
         if (loanRegistration.getLoanDate() == null) {
             loanRegistration.setLoanDate(new Date());
         }
 
-        // Set default status as active if not provided
         if (loanRegistration.getStatus() == null) {
             loanRegistration.setStatus("active");
         }
 
-        // Validate loan amount
         if (loanRegistration.getLoanAmount() == null || loanRegistration.getLoanAmount() <= 0) {
             throw new IllegalArgumentException("Loan amount must be greater than zero");
         }
@@ -78,16 +75,14 @@ public class LoanRegistrationService implements ILoanRegistrationService {
     @Override
     @Transactional
     public LoanRegistration updateLoan(LoanRegistration loan) {
-        // Check if loan exists
+        
         LoanRegistration existingLoan = loanRegistrationRepository.findById(loan.getLoanId())
                 .orElseThrow(() -> new RuntimeException("Loan not found with id: " + loan.getLoanId()));
 
-        // Update fields
         existingLoan.setLoanAmount(loan.getLoanAmount());
         existingLoan.setReason(loan.getReason());
         existingLoan.setStatus(loan.getStatus());
 
-        // Only update date if provided
         if (loan.getLoanDate() != null) {
             existingLoan.setLoanDate(loan.getLoanDate());
         }
@@ -98,16 +93,14 @@ public class LoanRegistrationService implements ILoanRegistrationService {
     @Override
     @Transactional
     public LoanRegistration updateLoanStatus(Integer id, String status) {
-        // Validate status
+        
         if (status == null || !(status.equals("active") || status.equals("inactive"))) {
             throw new IllegalArgumentException("Status must be either 'active' or 'inactive'");
         }
 
-        // Find loan
         LoanRegistration loan = loanRegistrationRepository.findById(id)
                 .orElseThrow(() -> new RuntimeException("Loan not found with id: " + id));
 
-        // Update status
         loan.setStatus(status);
 
         return loanRegistrationRepository.save(loan);

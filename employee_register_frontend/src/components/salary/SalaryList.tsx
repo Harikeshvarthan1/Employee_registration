@@ -20,13 +20,11 @@ const SalaryList: React.FC<SalaryListProps> = ({
   limitEntries,
   employeeFilter
 }) => {
-  // Main data states
   const [salaries, setSalaries] = useState<Salary[]>([]);
   const [, setEmployees] = useState<Employee[]>([]);
   const [filteredSalaries, setFilteredSalaries] = useState<Salary[]>([]);
   const [employeeMap, setEmployeeMap] = useState<Record<number, Employee>>({});
 
-  // UI states
   const [isLoading, setIsLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
   const [viewMode, setViewMode] = useState<'cards' | 'table'>('cards');
@@ -37,7 +35,6 @@ const SalaryList: React.FC<SalaryListProps> = ({
   const [isReloading, setIsReloading] = useState<boolean>(false);
   const [selectedItem, setSelectedItem] = useState<number | null>(null);
 
-  // Filter states
   const [searchTerm, setSearchTerm] = useState<string>('');
   const [typeFilter, setTypeFilter] = useState<string>('');
   const [dateRangeFilter, setDateRangeFilter] = useState<{
@@ -52,27 +49,22 @@ const SalaryList: React.FC<SalaryListProps> = ({
   const [currentPage, setCurrentPage] = useState<number>(1);
   const [itemsPerPage, setItemsPerPage] = useState<number>(10);
 
-  // Animation states
   const [highlightedId, setHighlightedId] = useState<number | null>(null);
 
-  // Refs
   const listRef = useRef<HTMLDivElement>(null);
   const filterPanelRef = useRef<HTMLDivElement>(null);
 
   const navigate = useNavigate();
 
-  // Load salaries and employees on component mount or when filters change
   useEffect(() => {
     loadData();
   }, [employeeFilter]);
 
-  // Load salary and employee data
   const loadData = async () => {
     setIsLoading(true);
     setError(null);
 
     try {
-      // Fetch data from API
       const [salaryData, employeeData] = await Promise.all([
         getAllSalaries(),
         getAllActiveEmployees()
@@ -81,7 +73,6 @@ const SalaryList: React.FC<SalaryListProps> = ({
       setSalaries(salaryData);
       setEmployees(employeeData);
 
-      // Create a map of employees for quick lookup
       const empMap = employeeData.reduce((acc, emp) => {
         acc[emp.id!] = emp;
         return acc;
@@ -90,22 +81,18 @@ const SalaryList: React.FC<SalaryListProps> = ({
       setEmployeeMap(empMap);
       setIsLoading(false);
     } catch (err: any) {
-      console.error('Error loading data:', err);
       setError(err.message || 'Failed to load salary data');
       setIsLoading(false);
     }
   };
 
-  // Apply filters to the salary data
   const applyFilters = useCallback(() => {
     let result = [...salaries];
 
-    // Apply employee filter if provided as a prop
     if (employeeFilter !== undefined) {
       result = result.filter(salary => salary.employeeId === employeeFilter);
     }
 
-    // Search term filter (search by employee name)
     if (searchTerm.trim()) {
       const term = searchTerm.toLowerCase();
       result = result.filter(salary => {
@@ -114,23 +101,20 @@ const SalaryList: React.FC<SalaryListProps> = ({
       });
     }
 
-    // Payment type filter
     if (typeFilter) {
       result = result.filter(salary => salary.paymentType === typeFilter);
     }
 
-    // Date range filter
     if (dateRangeFilter.start) {
       const startDate = new Date(dateRangeFilter.start);
       result = result.filter(salary => new Date(salary.datePaid) >= startDate);
     }
     if (dateRangeFilter.end) {
       const endDate = new Date(dateRangeFilter.end);
-      endDate.setHours(23, 59, 59); // End of day
+      endDate.setHours(23, 59, 59);
       result = result.filter(salary => new Date(salary.datePaid) <= endDate);
     }
 
-    // Sort results
     result.sort((a, b) => {
       let comparison = 0;
       
@@ -156,7 +140,6 @@ const SalaryList: React.FC<SalaryListProps> = ({
       return sortOrder.direction === 'asc' ? comparison : -comparison;
     });
 
-    // Limit entries if specified
     if (limitEntries) {
       result = result.slice(0, limitEntries);
     }
@@ -164,12 +147,10 @@ const SalaryList: React.FC<SalaryListProps> = ({
     setFilteredSalaries(result);
   }, [salaries, searchTerm, typeFilter, dateRangeFilter, sortOrder, employeeMap, employeeFilter, limitEntries]);
 
-  // Update filtered data when filters or source data changes
   useEffect(() => {
     applyFilters();
   }, [applyFilters, salaries, searchTerm, typeFilter, dateRangeFilter, sortOrder]);
 
-  // Handle sort click
   const handleSort = (field: string) => {
     setSortOrder(prev => ({
       field,
@@ -177,7 +158,6 @@ const SalaryList: React.FC<SalaryListProps> = ({
     }));
   };
 
-  // Reset all filters
   const resetFilters = () => {
     setSearchTerm('');
     setTypeFilter('');
@@ -186,51 +166,39 @@ const SalaryList: React.FC<SalaryListProps> = ({
     setShowFilters(false);
   };
 
-  // Handle refresh button click
   const handleRefresh = async () => {
     setIsReloading(true);
     await loadData();
     setIsReloading(false);
   };
 
-  // Show delete confirmation modal
   const confirmDelete = (salary: Salary) => {
     setSalaryToDelete(salary);
     setShowDeleteConfirm(true);
   };
 
-  // Cancel delete
   const cancelDelete = () => {
     setSalaryToDelete(null);
     setShowDeleteConfirm(false);
   };
 
-  // Handle salary deletion
   const handleDelete = async () => {
     if (!salaryToDelete || !salaryToDelete.id) return;
 
     try {
       await deleteSalary(salaryToDelete.id);
-      
-      // Update local state
       setSalaries(prev => prev.filter(s => s.id !== salaryToDelete.id));
-      
-      // Show success message
       setSuccessMessage('Salary payment deleted successfully');
       setShowSuccessToast(true);
       setTimeout(() => setShowSuccessToast(false), 3000);
-      
       setShowDeleteConfirm(false);
       setSalaryToDelete(null);
     } catch (err: any) {
-      console.error('Error deleting salary:', err);
       setError(err.message || 'Failed to delete salary payment');
     }
   };
 
-  // Handle edit salary
   const handleEdit = (salary: Salary) => {
-    // Highlight the row that was clicked
     setHighlightedId(salary.id || null);
     setTimeout(() => setHighlightedId(null), 1000);
 
@@ -241,7 +209,6 @@ const SalaryList: React.FC<SalaryListProps> = ({
     }
   };
 
-  // Handle add new salary
   const handleAddSalary = () => {
     if (onAddSalary) {
       onAddSalary();
@@ -250,12 +217,10 @@ const SalaryList: React.FC<SalaryListProps> = ({
     }
   };
 
-  // Get employee name by ID
   const getEmployeeName = (employeeId: number): string => {
     return employeeMap[employeeId]?.name || 'Unknown Employee';
   };
 
-  // Format currency for display
   const formatCurrency = (amount: number): string => {
     return new Intl.NumberFormat('en-IN', {
       style: 'currency',
@@ -264,10 +229,8 @@ const SalaryList: React.FC<SalaryListProps> = ({
     }).format(amount);
   };
 
-  // Format date for display
   const formatDate = (dateString: string | Date): string => {
     if (!dateString) return 'N/A';
-    
     const date = new Date(dateString);
     return date.toLocaleDateString('en-IN', {
       day: 'numeric',
@@ -276,81 +239,58 @@ const SalaryList: React.FC<SalaryListProps> = ({
     });
   };
 
-  // Get payment type label
   const getPaymentTypeLabel = (type: string): string => {
     return type === 'salary' ? 'Monthly Salary' : 'Daily Credit';
   };
 
-  // Get payment type icon
   const getPaymentTypeIcon = (type: string): string => {
     return type === 'salary' ? 'bi-wallet2' : 'bi-cash-coin';
   };
 
-  // Calculate pagination
   const totalPages = Math.ceil(filteredSalaries.length / itemsPerPage);
   const paginatedSalaries = filteredSalaries.slice(
     (currentPage - 1) * itemsPerPage,
     currentPage * itemsPerPage
   );
 
-  // Handle page change
   const handlePageChange = (page: number) => {
     setSelectedItem(null);
     setCurrentPage(page);
-    
-    // Scroll to top of the list when page changes
     if (listRef.current) {
       listRef.current.scrollTo({ top: 0, behavior: 'smooth' });
     }
   };
 
-  // Generate page numbers for pagination
   const getPageNumbers = () => {
     const pages = [];
     const maxPagesToShow = 5;
-    
     if (totalPages <= maxPagesToShow) {
-      // Show all pages if there are 5 or fewer
       for (let i = 1; i <= totalPages; i++) {
         pages.push(i);
       }
     } else {
-      // Always show first page
       pages.push(1);
-      
       let startPage = Math.max(2, currentPage - 1);
       let endPage = Math.min(totalPages - 1, currentPage + 1);
-      
-      // Adjust start and end if we're near the beginning or end
       if (currentPage <= 2) {
         endPage = 3;
       } else if (currentPage >= totalPages - 1) {
         startPage = totalPages - 2;
       }
-      
-      // Add ellipsis if needed
       if (startPage > 2) {
-        pages.push(-1); // -1 represents ellipsis
+        pages.push(-1);
       }
-      
-      // Add middle pages
       for (let i = startPage; i <= endPage; i++) {
         pages.push(i);
       }
-      
-      // Add ellipsis if needed
       if (endPage < totalPages - 1) {
-        pages.push(-2); // -2 represents ellipsis
+        pages.push(-2);
       }
-      
-      // Always show last page
       pages.push(totalPages);
     }
-    
     return pages;
   };
 
-  // Item selection logic
   const toggleItemSelection = (id: number) => {
     setSelectedItem(prev => prev === id ? null : id);
   };
@@ -417,7 +357,6 @@ const SalaryList: React.FC<SalaryListProps> = ({
         </div>
       )}
       
-      {/* Filter Panel */}
       <div 
         className={`filter-panel ${showFilters ? 'open' : ''}`}
         ref={filterPanelRef}
@@ -534,7 +473,6 @@ const SalaryList: React.FC<SalaryListProps> = ({
         </div>
       </div>
       
-      {/* Applied Filters */}
       {(searchTerm || typeFilter || dateRangeFilter.start || dateRangeFilter.end) && (
         <div className="applied-filters">
           <div className="filter-chips">
@@ -589,7 +527,6 @@ const SalaryList: React.FC<SalaryListProps> = ({
         </div>
       )}
       
-      {/* Loading State */}
       {isLoading && (
         <div className="loading-state">
           <div className="shimmer-container">
@@ -610,7 +547,6 @@ const SalaryList: React.FC<SalaryListProps> = ({
         </div>
       )}
       
-      {/* Error State */}
       {error && !isLoading && (
         <div className="error-state">
           <div className="error-icon">
@@ -628,7 +564,6 @@ const SalaryList: React.FC<SalaryListProps> = ({
         </div>
       )}
       
-      {/* Empty State */}
       {!isLoading && !error && filteredSalaries.length === 0 && (
         <div className="empty-state">
           <div className="empty-illustration">
@@ -661,7 +596,6 @@ const SalaryList: React.FC<SalaryListProps> = ({
         </div>
       )}
       
-      {/* Card View */}
       {!isLoading && !error && filteredSalaries.length > 0 && viewMode === 'cards' && (
         <div className="salary-card-grid">
           {paginatedSalaries.map((salary) => (
@@ -732,7 +666,6 @@ const SalaryList: React.FC<SalaryListProps> = ({
         </div>
       )}
       
-      {/* Table View */}
       {!isLoading && !error && filteredSalaries.length > 0 && viewMode === 'table' && (
         <div className="salary-table-wrapper">
           <table className="salary-table">
@@ -744,7 +677,7 @@ const SalaryList: React.FC<SalaryListProps> = ({
                       type="checkbox" 
                       id="select-all" 
                       checked={false} 
-                      onChange={() => {/* Handle select all */}}
+                      onChange={() => {}}
                     />
                     <label htmlFor="select-all"></label>
                   </div>
@@ -876,7 +809,6 @@ const SalaryList: React.FC<SalaryListProps> = ({
         </div>
       )}
       
-      {/* Pagination */}
       {!isLoading && !error && filteredSalaries.length > 0 && !isEmbedded && (
         <div className="pagination-container">
           <div className="pagination-info">
@@ -896,7 +828,6 @@ const SalaryList: React.FC<SalaryListProps> = ({
             
             {getPageNumbers().map((pageNum, index) => (
               pageNum < 0 ? (
-                // Render ellipsis
                 <span key={`ellipsis-${index}`} className="ellipsis">...</span>
               ) : (
                 <button 
@@ -935,14 +866,12 @@ const SalaryList: React.FC<SalaryListProps> = ({
         </div>
       )}
       
-      {/* Floating Action Button (for mobile) */}
       {!isEmbedded && (
         <button className="floating-action-btn" onClick={handleAddSalary}>
           <i className="bi bi-plus-lg"></i>
         </button>
       )}
       
-      {/* Delete Confirmation Modal */}
       {showDeleteConfirm && (
         <div className="modal-overlay">
           <div className="modal-container delete-modal">
@@ -996,7 +925,6 @@ const SalaryList: React.FC<SalaryListProps> = ({
         </div>
       )}
       
-      {/* Success Toast */}
       {showSuccessToast && (
         <div className="toast-notification">
           <div className="toast-icon">

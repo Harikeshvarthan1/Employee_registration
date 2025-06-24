@@ -14,6 +14,5 @@ public interface ISalaryService {
     Salary updateSalary(Salary salary);
     boolean deleteSalary(Integer id);
 
-    // Add this new method
     Map<String, Object> getSalaryStatistics();
 }

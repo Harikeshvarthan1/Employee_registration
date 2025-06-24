@@ -1,8 +1,16 @@
 package com.emp.proj.employee_register.entities;
 
-import jakarta.persistence.*;
-import lombok.AllArgsConstructor;
 import java.util.Date;
+
+import jakarta.persistence.Column;
+import jakarta.persistence.Entity;
+import jakarta.persistence.GeneratedValue;
+import jakarta.persistence.GenerationType;
+import jakarta.persistence.Id;
+import jakarta.persistence.Table;
+import jakarta.persistence.Temporal;
+import jakarta.persistence.TemporalType;
+import lombok.AllArgsConstructor;
 
 @Entity
 @AllArgsConstructor
@@ -21,7 +29,7 @@ public class Salary {
     private Date datePaid;
 
     @Column(name = "payment_type")
-    private String paymentType; // "daily_credit" or "salary"
+    private String paymentType;
 
     private Double amount;
 
@@ -29,11 +37,9 @@ public class Salary {
     @Column(name = "last_salary_date")
     private Date lastSalaryDate;
 
-    // Default constructor required by JPA
     public Salary() {
     }
 
-    // Constructor without ID for entity creation
     public Salary(Integer employeeId, Date datePaid, String paymentType,
                   Double amount, Date lastSalaryDate) {
         this.employeeId = employeeId;
@@ -43,7 +49,6 @@ public class Salary {
         this.lastSalaryDate = lastSalaryDate;
     }
 
-    // Getters and setters
     public Integer getId() {
         return id;
     }

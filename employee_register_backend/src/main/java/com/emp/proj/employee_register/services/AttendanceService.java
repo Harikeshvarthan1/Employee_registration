@@ -1,16 +1,21 @@
 package com.emp.proj.employee_register.services;
 
+import java.text.ParseException;
+import java.text.SimpleDateFormat;
+import java.util.Date;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.stereotype.Service;
+
 import com.emp.proj.employee_register.entities.Attendance;
 import com.emp.proj.employee_register.entities.Employee;
 import com.emp.proj.employee_register.repository.IAttendanceRepository;
 import com.emp.proj.employee_register.repository.IEmployeeRepository;
-import jakarta.transaction.Transactional;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.stereotype.Service;
 
-import java.text.ParseException;
-import java.text.SimpleDateFormat;
-import java.util.*;
+import jakarta.transaction.Transactional;
 
 @Service
 public class AttendanceService implements IAttendanceService {
@@ -26,7 +31,7 @@ public class AttendanceService implements IAttendanceService {
     @Override
     @Transactional
     public Attendance addAttendance(Attendance attendance) {
-        // Check if employee exists and is active
+        
         Employee employee = employeeRepository.findById(attendance.getEmployeeId())
                 .orElseThrow(() -> new RuntimeException("Employee not found with id: " + attendance.getEmployeeId()));
 
@@ -34,7 +39,6 @@ public class AttendanceService implements IAttendanceService {
             throw new RuntimeException("Cannot add attendance for inactive employee");
         }
 
-        // Calculate total salary based on attendance status and base salary
         double baseSalary = employee.getBaseSalary();
         double totalSalary = 0;
 
@@ -46,7 +50,6 @@ public class AttendanceService implements IAttendanceService {
                 totalSalary = baseSalary / 2;
                 break;
             case "overtime":
-                // Base salary plus overtime salary
                 totalSalary = baseSalary + (attendance.getOvertimeSalary() != null ? attendance.getOvertimeSalary() : 0);
                 break;
             case "absent":
@@ -64,15 +67,13 @@ public class AttendanceService implements IAttendanceService {
     @Override
     @Transactional
     public Attendance updateAttendance(Attendance attendance) {
-        // Check if attendance record exists
+        
         Attendance existingAttendance = attendanceRepository.findById(attendance.getId())
                 .orElseThrow(() -> new RuntimeException("Attendance record not found with id: " + attendance.getId()));
 
-        // Update fields
         existingAttendance.setStatus(attendance.getStatus());
         existingAttendance.setDescription(attendance.getDescription());
 
-        // Update overtime details if provided
         if (attendance.getOvertimeDescription() != null) {
             existingAttendance.setOvertimeDescription(attendance.getOvertimeDescription());
         }
@@ -85,7 +86,6 @@ public class AttendanceService implements IAttendanceService {
             existingAttendance.setOvertimeHours(attendance.getOvertimeHours());
         }
 
-        // Recalculate total salary
         Employee employee = employeeRepository.findById(existingAttendance.getEmployeeId())
                 .orElseThrow(() -> new RuntimeException("Employee not found"));
 
@@ -115,21 +115,17 @@ public class AttendanceService implements IAttendanceService {
     @Override
     @Transactional
     public Attendance updateOvertimeDetails(Integer attendanceId, String overtimeDescription, Double overtimeSalary, Double overtimeHours) {
-        // Find attendance record
         Attendance attendance = attendanceRepository.findById(attendanceId)
                 .orElseThrow(() -> new RuntimeException("Attendance record not found with id: " + attendanceId));
 
-        // Check if the attendance status is overtime
         if (!"overtime".equals(attendance.getStatus())) {
             throw new IllegalStateException("Cannot update overtime details for non-overtime attendance");
         }
 
-        // Update overtime details
         attendance.setOvertimeDescription(overtimeDescription);
         attendance.setOvertimeSalary(overtimeSalary);
         attendance.setOvertimeHours(overtimeHours);
 
-        // Recalculate total salary
         Employee employee = employeeRepository.findById(attendance.getEmployeeId())
                 .orElseThrow(() -> new RuntimeException("Employee not found"));
 
@@ -173,14 +169,12 @@ public class AttendanceService implements IAttendanceService {
 
     @Override
     public Map<String, Object> getMonthlyAttendanceSummary(Integer employeeId, Integer month, Integer year) {
-        // Verify employee exists
+        
         employeeRepository.findById(employeeId)
                 .orElseThrow(() -> new RuntimeException("Employee not found with id: " + employeeId));
 
-        // Get all attendance records for the month
         List<Attendance> attendanceList = attendanceRepository.findByEmployeeIdAndMonthAndYear(employeeId, month, year);
 
-        // Calculate summary statistics
         int presentDays = 0;
         int absentDays = 0;
         int halfDays = 0;
@@ -210,7 +204,6 @@ public class AttendanceService implements IAttendanceService {
             totalSalary += (attendance.getTotalSalary() != null ? attendance.getTotalSalary() : 0);
         }
 
-        // Create summary map
         Map<String, Object> summary = new HashMap<>();
         summary.put("employeeId", employeeId);
         summary.put("month", month);

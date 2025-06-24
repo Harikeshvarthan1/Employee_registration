@@ -10,7 +10,7 @@ import {
 import "./SalaryForm.css";
 
 interface SalaryFormProps {
-  salary?: Salary; // For edit mode
+  salary?: Salary;
   onSuccess?: (salary: Salary) => void;
   onCancel?: () => void;
   preselectedEmployeeId?: number;
@@ -22,7 +22,6 @@ const SalaryForm: React.FC<SalaryFormProps> = ({
   onCancel,
   preselectedEmployeeId,
 }) => {
-  // Form data state
   const [formData, setFormData] = useState<{
     id?: number;
     employeeId: number | "";
@@ -38,7 +37,6 @@ const SalaryForm: React.FC<SalaryFormProps> = ({
     lastSalaryDate: "",
   });
 
-  // UI states
   const [isLoading, setIsLoading] = useState<boolean>(false);
   const [isSaving, setIsSaving] = useState<boolean>(false);
   const [error, setError] = useState<string | null>(null);
@@ -58,13 +56,11 @@ const SalaryForm: React.FC<SalaryFormProps> = ({
   const [amountSuggestion, setAmountSuggestion] = useState<number | null>(null);
   const [animateAmount, setAnimateAmount] = useState<boolean>(false);
 
-  // Refs
   const amountInputRef = useRef<HTMLInputElement>(null);
   const suggestedAmountRef = useRef<HTMLDivElement>(null);
 
   const navigate = useNavigate();
 
-  // Load employees and initialize form data
   useEffect(() => {
     const loadEmployees = async () => {
       setIsLoading(true);
@@ -72,7 +68,6 @@ const SalaryForm: React.FC<SalaryFormProps> = ({
         const employeeData = await getAllActiveEmployees();
         setEmployees(employeeData);
 
-        // If we're in edit mode, populate form data
         if (salary) {
           const employeePaid =
             employeeData.find((emp) => emp.id === salary.employeeId) || null;
@@ -91,9 +86,7 @@ const SalaryForm: React.FC<SalaryFormProps> = ({
             amount: salary.amount,
             lastSalaryDate: formattedLastSalaryDate,
           });
-        }
-        // If preselected employee, set that employee
-        else if (preselectedEmployeeId) {
+        } else if (preselectedEmployeeId) {
           const preselectedEmployee =
             employeeData.find((emp) => emp.id === preselectedEmployeeId) ||
             null;
@@ -107,7 +100,6 @@ const SalaryForm: React.FC<SalaryFormProps> = ({
 
         setIsLoading(false);
       } catch (err: any) {
-        console.error("Error loading employees:", err);
         setError(err.message || "Failed to load employees. Please try again.");
         setIsLoading(false);
       }
@@ -116,12 +108,10 @@ const SalaryForm: React.FC<SalaryFormProps> = ({
     loadEmployees();
   }, [salary, preselectedEmployeeId]);
 
-  // Helper function to format date for input field
   const formatDateForInput = (date: string | Date): string => {
     if (!date) return "";
 
     if (typeof date === "string") {
-      // Check if it's already in YYYY-MM-DD format
       if (/^\d{4}-\d{2}-\d{2}$/.test(date)) {
         return date;
       }
@@ -131,15 +121,11 @@ const SalaryForm: React.FC<SalaryFormProps> = ({
     return date.toISOString().split("T")[0];
   };
 
-  // Load previous salary data for an employee
   const loadPreviousSalaryData = async (employeeId: number) => {
     try {
-      // In a real app, you'd have an API endpoint to get salary history
-      // For now, we'll just get the latest salary as an example
       const latestSalary = await getLatestSalaryByEmployeeId(employeeId);
       setPreviousSalaries(latestSalary ? [latestSalary] : []);
 
-      // Set last salary date if available
       if (latestSalary && latestSalary.datePaid) {
         setFormData((prev) => ({
           ...prev,
@@ -147,20 +133,15 @@ const SalaryForm: React.FC<SalaryFormProps> = ({
         }));
       }
     } catch (err) {
-      console.error("Error loading previous salary data:", err);
-      // Don't show an error to the user for this - it's not critical
       setPreviousSalaries([]);
     }
   };
 
-  // Calculate a suggested amount based on employee's base salary
   const calculateSuggestedAmount = (employee: Employee) => {
     if (!employee || !employee.baseSalary) return;
 
-    // For a monthly payment, suggest the full base salary
     let suggestion = employee.baseSalary;
 
-    // Check if we're near month end to make a better suggestion
     const today = new Date();
     const dayOfMonth = today.getDate();
     const lastDayOfMonth = new Date(
@@ -169,18 +150,15 @@ const SalaryForm: React.FC<SalaryFormProps> = ({
       0
     ).getDate();
 
-    // If we're in the last 3 days of the month, suggest full salary
     const isMonthEnd = dayOfMonth >= lastDayOfMonth - 2;
 
-    // If it's not month end and we're setting a daily credit, suggest a partial amount
     if (!isMonthEnd && formData.paymentType === "daily_credit") {
-      suggestion = Math.round(employee.baseSalary / 4); // Weekly amount as a suggestion
+      suggestion = Math.round(employee.baseSalary / 4);
     }
 
     setAmountSuggestion(suggestion);
   };
 
-  // Handle form field changes
   const handleInputChange = (
     e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>
   ) => {
@@ -188,21 +166,17 @@ const SalaryForm: React.FC<SalaryFormProps> = ({
 
     let parsedValue: string | number = value;
 
-    // Parse number inputs
     if (type === "number") {
       parsedValue = value === "" ? 0 : Number(value);
     }
 
-    // Special handling for payment type change
     if (name === "paymentType") {
       const newPaymentType = value as "daily_credit" | "salary";
 
-      // Adjust amount suggestion based on payment type
       if (selectedEmployee) {
         if (newPaymentType === "salary") {
           setAmountSuggestion(selectedEmployee.baseSalary);
         } else {
-          // For daily credit, suggest 1/4th of base salary
           setAmountSuggestion(Math.round(selectedEmployee.baseSalary / 4));
         }
 
@@ -211,13 +185,11 @@ const SalaryForm: React.FC<SalaryFormProps> = ({
       }
     }
 
-    // Update form data
     setFormData((prev) => ({
       ...prev,
       [name]: parsedValue,
     }));
 
-    // Clear validation error when field is edited
     if (validationErrors[name]) {
       setValidationErrors((prev) => ({
         ...prev,
@@ -226,19 +198,16 @@ const SalaryForm: React.FC<SalaryFormProps> = ({
     }
   };
 
-  // Handle employee selection change
   const handleEmployeeChange = async (
     e: React.ChangeEvent<HTMLSelectElement>
   ) => {
     const employeeId = e.target.value ? Number(e.target.value) : "";
 
-    // Update form data with selected employee
     setFormData((prev) => ({
       ...prev,
       employeeId,
     }));
 
-    // Clear validation error
     if (validationErrors.employeeId) {
       setValidationErrors((prev) => ({
         ...prev,
@@ -246,19 +215,13 @@ const SalaryForm: React.FC<SalaryFormProps> = ({
       }));
     }
 
-    // Find selected employee object
     if (employeeId !== "") {
       const employee = employees.find((emp) => emp.id === employeeId) || null;
       setSelectedEmployee(employee);
 
       if (employee) {
-        // Load previous salary data
         await loadPreviousSalaryData(employeeId as number);
-
-        // Calculate suggested amount
         calculateSuggestedAmount(employee);
-
-        // Show suggestion briefly
         setShowSuggestedAmount(true);
         setTimeout(() => setShowSuggestedAmount(false), 5000);
       }
@@ -269,7 +232,6 @@ const SalaryForm: React.FC<SalaryFormProps> = ({
     }
   };
 
-  // Apply suggested amount
   const applySuggestedAmount = () => {
     if (amountSuggestion !== null) {
       setFormData((prev) => ({
@@ -282,14 +244,12 @@ const SalaryForm: React.FC<SalaryFormProps> = ({
 
       setShowSuggestedAmount(false);
 
-      // Focus the amount input
       if (amountInputRef.current) {
         amountInputRef.current.focus();
       }
     }
   };
 
-  // Format currency for display
   const formatCurrency = (amount: number): string => {
     return new Intl.NumberFormat("en-IN", {
       style: "currency",
@@ -298,7 +258,6 @@ const SalaryForm: React.FC<SalaryFormProps> = ({
     }).format(amount);
   };
 
-  // Format date for display
   const formatDate = (dateString: string | Date): string => {
     if (!dateString) return "N/A";
 
@@ -310,12 +269,10 @@ const SalaryForm: React.FC<SalaryFormProps> = ({
     });
   };
 
-  // Get payment type label
   const getPaymentTypeLabel = (type: "daily_credit" | "salary"): string => {
     return type === "salary" ? "Monthly Salary" : "Daily Credit";
   };
 
-  // Validate form before submission
   const validateForm = (): boolean => {
     const errors: Record<string, string> = {};
 
@@ -331,7 +288,6 @@ const SalaryForm: React.FC<SalaryFormProps> = ({
       errors.amount = "Please enter a valid amount";
     }
 
-    // For salary type, last salary date is required
     if (formData.paymentType === "salary" && !formData.lastSalaryDate) {
       errors.lastSalaryDate =
         "Last salary date is required for monthly payments";
@@ -341,7 +297,6 @@ const SalaryForm: React.FC<SalaryFormProps> = ({
     return Object.keys(errors).length === 0;
   };
 
-  // Handle form submission
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
@@ -361,10 +316,8 @@ const SalaryForm: React.FC<SalaryFormProps> = ({
       };
 
       if (salary?.id) {
-        // Update existing salary
         result = await updateSalary(salary.id, payloadData);
       } else {
-        // Add new salary
         result = await addSalary(payloadData);
       }
 
@@ -376,32 +329,27 @@ const SalaryForm: React.FC<SalaryFormProps> = ({
         if (onSuccess) {
           onSuccess(result);
         } else {
-          // Reset form for another entry or navigate away
           if (!salary) {
-            // If it was a new entry, reset form but keep the same employee selected
             const currentEmployeeId = formData.employeeId;
             setFormData({
               employeeId: currentEmployeeId,
               datePaid: new Date().toISOString().split("T")[0],
               paymentType: "salary",
               amount: 0,
-              lastSalaryDate: formData.datePaid, // Use current payment as last payment date
+              lastSalaryDate: formData.datePaid,
             });
           } else {
-            // If it was an edit, navigate back
             navigate(-1);
           }
         }
       }, 2000);
     } catch (err: any) {
-      console.error("Error saving salary:", err);
       setError(err.message || "Failed to save salary. Please try again.");
     } finally {
       setIsSaving(false);
     }
   };
 
-  // Handle cancel button
   const handleCancel = () => {
     if (onCancel) {
       onCancel();
@@ -410,12 +358,10 @@ const SalaryForm: React.FC<SalaryFormProps> = ({
     }
   };
 
-  // Get today's date
   const today = new Date().toISOString().split("T")[0];
 
   return (
     <div className="salary-form-container">
-      {/* Success Animation */}
       {showSuccessAnimation && (
         <div className="success-animation-container">
           <div className="success-animation">
@@ -446,7 +392,6 @@ const SalaryForm: React.FC<SalaryFormProps> = ({
         </div>
       )}
 
-      {/* Error Message */}
       {error && (
         <div className="error-message">
           <i className="bi bi-exclamation-triangle"></i>
@@ -472,7 +417,6 @@ const SalaryForm: React.FC<SalaryFormProps> = ({
 
         <div className="form-body">
           <form onSubmit={handleSubmit}>
-            {/* Employee Selection */}
             <div
               className={`form-group ${
                 validationErrors.employeeId ? "has-error" : ""
@@ -503,7 +447,6 @@ const SalaryForm: React.FC<SalaryFormProps> = ({
               )}
             </div>
 
-            {/* Employee Summary Card (if selected) */}
             {selectedEmployee && (
               <div className="employee-summary-card">
                 <div className="employee-avatar">
@@ -548,7 +491,6 @@ const SalaryForm: React.FC<SalaryFormProps> = ({
               </div>
             )}
 
-            {/* Payment Type Toggle */}
             <div className="form-group payment-type-group">
               <label>
                 <i className="bi bi-credit-card"></i> Payment Type
@@ -585,7 +527,6 @@ const SalaryForm: React.FC<SalaryFormProps> = ({
             </div>
 
             <div className="form-row">
-              {/* Payment Amount */}
               <div
                 className={`form-group ${
                   validationErrors.amount ? "has-error" : ""
@@ -614,7 +555,6 @@ const SalaryForm: React.FC<SalaryFormProps> = ({
                   />
                 </div>
 
-                {/* Suggested Amount Bubble */}
                 {showSuggestedAmount && amountSuggestion !== null && (
                   <div
                     className="suggested-amount-bubble"
@@ -644,7 +584,6 @@ const SalaryForm: React.FC<SalaryFormProps> = ({
                 )}
               </div>
 
-              {/* Payment Date */}
               <div
                 className={`form-group ${
                   validationErrors.datePaid ? "has-error" : ""
@@ -668,7 +607,6 @@ const SalaryForm: React.FC<SalaryFormProps> = ({
               </div>
             </div>
 
-            {/* Last Salary Date (only for monthly salary) */}
             {formData.paymentType === "salary" && (
               <div
                 className={`form-group ${
@@ -699,7 +637,6 @@ const SalaryForm: React.FC<SalaryFormProps> = ({
               </div>
             )}
 
-            {/* Payment Summary Card */}
             {selectedEmployee && formData.amount > 0 && (
               <div className="payment-summary-card">
                 <h3 className="summary-title">
@@ -748,7 +685,6 @@ const SalaryForm: React.FC<SalaryFormProps> = ({
               </div>
             )}
 
-            {/* Form Actions */}
             <div className="form-actions">
               <button
                 type="button"

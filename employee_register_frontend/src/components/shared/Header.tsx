@@ -2,7 +2,6 @@ import React, { useState, useEffect, useRef } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import './Header.css';
 
-// You'll need to create this context or pass auth as props
 import { useAuth } from '../../contexts/AuthContext';
 
 const Header: React.FC = () => {
@@ -13,7 +12,6 @@ const Header: React.FC = () => {
   const dropdownRef = useRef<HTMLDivElement>(null);
   const { currentUser, isAdmin, logout } = useAuth();
 
-  // Close dropdown when clicking outside
   useEffect(() => {
     function handleClickOutside(event: MouseEvent) {
       if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
@@ -24,19 +22,16 @@ const Header: React.FC = () => {
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
 
-  // Close mobile menu when route changes
   useEffect(() => {
     setMobileMenuOpen(false);
     setDropdownOpen(false);
   }, [location.pathname]);
 
-  // Handle logout
   const handleLogout = () => {
     logout();
     navigate('/login');
   };
 
-  // Navigation items based on user role
   const getNavItems = () => {
     const items = [
       { path: '/dashboard', label: 'Dashboard', icon: 'home', allowedRoles: ['ADMIN', 'USER'] },
@@ -47,13 +42,11 @@ const Header: React.FC = () => {
       { path: '/loan-repay', label: 'Loan Repayment', icon: 'credit-card', allowedRoles: ['ADMIN', 'USER'] },
     ];
 
-    // Filter items based on user role
     return items.filter(item => 
       item.allowedRoles.includes(isAdmin() ? 'ADMIN' : 'USER')
     );
   };
 
-  // Check if a route is active
   const isActive = (path: string): boolean => {
     return location.pathname === path || location.pathname.startsWith(`${path}/`);
   };
@@ -61,7 +54,6 @@ const Header: React.FC = () => {
   return (
     <header className="main-header fixed-header">
       <div className="header-container">
-        {/* Logo and branding */}
         <div className="logo-container">
           <Link to="/dashboard" className="logo">
             <div className="logo-icon">
@@ -74,7 +66,6 @@ const Header: React.FC = () => {
           </Link>
         </div>
 
-        {/* Mobile menu toggle */}
         <button 
           className={`menu-toggle ${mobileMenuOpen ? 'active' : ''}`}
           onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
@@ -85,7 +76,6 @@ const Header: React.FC = () => {
           <span className="toggle-bar"></span>
         </button>
 
-        {/* Navigation and user actions */}
         <div className={`nav-container ${mobileMenuOpen ? 'open' : ''}`}>
           <nav className="main-nav">
             <ul className="nav-list">
@@ -101,7 +91,6 @@ const Header: React.FC = () => {
             </ul>
           </nav>
 
-          {/* User profile section */}
           {currentUser && (
             <div className="user-section" ref={dropdownRef}>
               <div 
@@ -122,7 +111,6 @@ const Header: React.FC = () => {
                 <i className={`bi bi-chevron-${dropdownOpen ? 'up' : 'down'} dropdown-arrow`}></i>
               </div>
 
-              {/* User dropdown menu */}
               {dropdownOpen && (
                 <div className="user-dropdown">
                   <div className="dropdown-header">

@@ -1,8 +1,16 @@
 package com.emp.proj.employee_register.entities;
 
-import jakarta.persistence.*;
-import lombok.AllArgsConstructor;
 import java.util.Date;
+
+import jakarta.persistence.Column;
+import jakarta.persistence.Entity;
+import jakarta.persistence.GeneratedValue;
+import jakarta.persistence.GenerationType;
+import jakarta.persistence.Id;
+import jakarta.persistence.Table;
+import jakarta.persistence.Temporal;
+import jakarta.persistence.TemporalType;
+import lombok.AllArgsConstructor;
 
 @Entity
 @AllArgsConstructor
@@ -26,11 +34,9 @@ public class LoanRepay {
     @Column(name = "repay_date")
     private Date repayDate;
 
-    // Default constructor required by JPA
     public LoanRepay() {
     }
 
-    // Constructor without ID for entity creation
     public LoanRepay(Integer loanId, Integer employeeId, Double repayAmount, Date repayDate) {
         this.loanId = loanId;
         this.employeeId = employeeId;
@@ -38,7 +44,6 @@ public class LoanRepay {
         this.repayDate = repayDate;
     }
 
-    // Getters and setters
     public Integer getId() {
         return id;
     }

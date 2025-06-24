@@ -1,8 +1,16 @@
 package com.emp.proj.employee_register.entities;
 
-import jakarta.persistence.*;
-import lombok.AllArgsConstructor;
 import java.util.Date;
+
+import jakarta.persistence.Column;
+import jakarta.persistence.Entity;
+import jakarta.persistence.GeneratedValue;
+import jakarta.persistence.GenerationType;
+import jakarta.persistence.Id;
+import jakarta.persistence.Table;
+import jakarta.persistence.Temporal;
+import jakarta.persistence.TemporalType;
+import lombok.AllArgsConstructor;
 
 @Entity
 @AllArgsConstructor
@@ -19,7 +27,7 @@ public class Attendance {
     @Temporal(TemporalType.DATE)
     private Date date;
 
-    private String status; // "present", "absent", "overtime", "halfday"
+    private String status;
 
     @Column(name = "overtime_description")
     private String overtimeDescription;
@@ -35,11 +43,9 @@ public class Attendance {
     @Column(name = "total_salary")
     private Double totalSalary;
 
-    // Default constructor required by JPA
     public Attendance() {
     }
 
-    // Constructor without ID for entity creation
     public Attendance(Integer employeeId, Date date, String status,
                       String overtimeDescription, Double overtimeSalary, Double overtimeHours,
                       String description, Double totalSalary) {
@@ -53,7 +59,6 @@ public class Attendance {
         this.totalSalary = totalSalary;
     }
 
-    // Getters and setters
     public Integer getId() {
         return id;
     }

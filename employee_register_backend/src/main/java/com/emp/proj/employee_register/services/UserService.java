@@ -1,12 +1,14 @@
 package com.emp.proj.employee_register.services;
 
-import com.emp.proj.employee_register.entities.User;
-import com.emp.proj.employee_register.repository.IUserRepository;
-import jakarta.transaction.Transactional;
+import java.util.List;
+
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
-import java.util.List;
+import com.emp.proj.employee_register.entities.User;
+import com.emp.proj.employee_register.repository.IUserRepository;
+
+import jakarta.transaction.Transactional;
 
 @Service
 public class UserService implements IUserService {
@@ -17,17 +19,14 @@ public class UserService implements IUserService {
     @Override
     @Transactional
     public User addUser(User user) {
-        // Validate username is unique
         if (userRepository.existsByUserName(user.getUserName())) {
             throw new IllegalArgumentException("Username already exists");
         }
 
-        // Validate email is unique if provided
         if (user.getEmail() != null && !user.getEmail().isEmpty() && userRepository.existsByEmail(user.getEmail())) {
             throw new IllegalArgumentException("Email already exists");
         }
 
-        // Set default role if not provided
         if (user.getRole() == null || user.getRole().isEmpty()) {
             user.setRole("USER");
         }
@@ -50,27 +49,23 @@ public class UserService implements IUserService {
     @Override
     @Transactional
     public User updateUser(User user) {
-        // Check if user exists
+        
         User existingUser = userRepository.findById(user.getUserId())
                 .orElseThrow(() -> new RuntimeException("User not found with id: " + user.getUserId()));
 
-        // Check if username is being changed and if it already exists
         if (!existingUser.getUserName().equals(user.getUserName()) &&
                 userRepository.existsByUserName(user.getUserName())) {
             throw new IllegalArgumentException("Username already exists");
         }
 
-        // Check if email is being changed and if it already exists
         if (user.getEmail() != null && !user.getEmail().isEmpty() &&
                 !user.getEmail().equals(existingUser.getEmail()) &&
                 userRepository.existsByEmail(user.getEmail())) {
             throw new IllegalArgumentException("Email already exists");
         }
 
-        // Update fields
         existingUser.setUserName(user.getUserName());
 
-        // Only update password if provided
         if (user.getPassword() != null && !user.getPassword().isEmpty()) {
             existingUser.setPassword(user.getPassword());
         }
@@ -93,7 +88,6 @@ public class UserService implements IUserService {
 
     @Transactional
     public boolean deleteUserById(int id) {
-        // This method delegates to the interface method for consistency
         return deleteUser(id);
     }
 

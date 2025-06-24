@@ -5,7 +5,7 @@ import { addEmployee, updateEmployee } from "../../apis/employeeApi";
 import "./EmployeeForm.css";
 
 interface EmployeeFormProps {
-  employee?: Employee; // For edit mode
+  employee?: Employee; 
   onSuccess?: (employee: Employee) => void;
   onCancel?: () => void;
 }
@@ -15,7 +15,6 @@ const EmployeeForm: React.FC<EmployeeFormProps> = ({
   onSuccess,
   onCancel,
 }) => {
-  // Initialize form data
   const [formData, setFormData] = useState<Employee>({
     name: "",
     phoneNo: "",
@@ -26,7 +25,6 @@ const EmployeeForm: React.FC<EmployeeFormProps> = ({
     status: "active",
   });
 
-  // UI states
   const [isLoading, setIsLoading] = useState<boolean>(false);
   const [error, setError] = useState<string | null>(null);
   const [currentView, setCurrentView] = useState<"add" | "edit">(
@@ -37,28 +35,22 @@ const EmployeeForm: React.FC<EmployeeFormProps> = ({
   >({});
   const [showSuccessToast, setShowSuccessToast] = useState(false);
 
-  // Date constraints
   const [minDate, setMinDate] = useState<string>("");
   const [maxDate, setMaxDate] = useState<string>("");
 
   const navigate = useNavigate();
 
-  // Initialize component with employee data for edit mode
   useEffect(() => {
-    // Set date constraints
     const today = new Date().toISOString().split("T")[0];
     setMaxDate(today);
 
-    // Set min date to 50 years ago
     const fiftyYearsAgo = new Date();
     fiftyYearsAgo.setFullYear(fiftyYearsAgo.getFullYear() - 50);
     setMinDate(fiftyYearsAgo.toISOString().split("T")[0]);
 
-    // If employee data is provided, populate the form (edit mode)
     if (employee) {
       setCurrentView("edit");
 
-      // Format the date if it's a Date object
       const formattedJoinDate =
         employee.joinDate instanceof Date
           ? employee.joinDate.toISOString().split("T")[0]
@@ -71,7 +63,6 @@ const EmployeeForm: React.FC<EmployeeFormProps> = ({
         joinDate: formattedJoinDate,
       });
     } else {
-      // Default values for add mode
       setFormData({
         name: "",
         phoneNo: "",
@@ -84,7 +75,6 @@ const EmployeeForm: React.FC<EmployeeFormProps> = ({
     }
   }, [employee]);
 
-  // Validate the form data
   const validateForm = (): boolean => {
     const errors: Record<string, string> = {};
 
@@ -118,7 +108,6 @@ const EmployeeForm: React.FC<EmployeeFormProps> = ({
     return Object.keys(errors).length === 0;
   };
 
-  // Handle form input changes
   const handleInputChange = (
     e: React.ChangeEvent<
       HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement
@@ -128,7 +117,6 @@ const EmployeeForm: React.FC<EmployeeFormProps> = ({
 
     let parsedValue: string | number | Date = value;
 
-    // Convert number inputs
     if (type === "number") {
       parsedValue = parseFloat(value || "0");
     }
@@ -138,7 +126,6 @@ const EmployeeForm: React.FC<EmployeeFormProps> = ({
       [name]: parsedValue,
     });
 
-    // Clear validation error when field is edited
     if (validationErrors[name]) {
       setValidationErrors({
         ...validationErrors,
@@ -147,7 +134,6 @@ const EmployeeForm: React.FC<EmployeeFormProps> = ({
     }
   };
 
-  // Format date for display
   const formatDate = (dateString: string | Date): string => {
     if (!dateString) return "Not specified";
 
@@ -160,7 +146,6 @@ const EmployeeForm: React.FC<EmployeeFormProps> = ({
     });
   };
 
-  // Handle form submission
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
@@ -174,23 +159,18 @@ const EmployeeForm: React.FC<EmployeeFormProps> = ({
     try {
       let result;
 
-      // Format data for API
       const employeeData: Employee = {
         ...formData,
         joinDate: new Date(formData.joinDate),
       };
 
       if (currentView === "edit" && employee?.id) {
-        // Update existing employee
         result = await updateEmployee({
           ...employeeData,
           id: employee.id,
         });
-        console.log("Employee updated successfully:", result);
       } else {
-        // Add new employee
         result = await addEmployee(employeeData);
-        console.log("Employee added successfully:", result);
       }
 
       setShowSuccessToast(true);
@@ -201,14 +181,12 @@ const EmployeeForm: React.FC<EmployeeFormProps> = ({
         }
       }, 2000);
     } catch (err: any) {
-      console.error("Error saving employee:", err);
       setError(err.message || "An error occurred while saving the employee");
     } finally {
       setIsLoading(false);
     }
   };
 
-  // Cancel form and go back
   const handleCancel = () => {
     if (onCancel) {
       onCancel();
@@ -217,7 +195,6 @@ const EmployeeForm: React.FC<EmployeeFormProps> = ({
     }
   };
 
-  // Format currency for display - Updated to use INR
   const formatCurrency = (amount: number): string => {
     return new Intl.NumberFormat("en-IN", {
       style: "currency",
@@ -227,8 +204,6 @@ const EmployeeForm: React.FC<EmployeeFormProps> = ({
     }).format(amount);
   };
 
-
-  // Common roles for suggestions
   const commonRoles = [
     "Manager",
     "Developer",
@@ -244,7 +219,6 @@ const EmployeeForm: React.FC<EmployeeFormProps> = ({
 
   return (
     <div className="employee-form-container">
-      {/* Error display */}
       {error && (
         <div className="error-message">
           <i className="bi bi-exclamation-triangle"></i>
@@ -259,7 +233,6 @@ const EmployeeForm: React.FC<EmployeeFormProps> = ({
         </div>
       )}
 
-      {/* Form card */}
       <div className="employee-form-card">
         <div className="card-header">
           <h3>
@@ -270,11 +243,8 @@ const EmployeeForm: React.FC<EmployeeFormProps> = ({
 
         <div className="card-body">
           <form onSubmit={handleSubmit}>
-            {/* Two column layout for form fields */}
             <div className="form-columns">
-              {/* Left column */}
               <div className="form-column">
-                {/* Employee name field */}
                 <div
                   className={`form-group ${
                     validationErrors.name ? "has-error" : ""
@@ -299,7 +269,6 @@ const EmployeeForm: React.FC<EmployeeFormProps> = ({
                   )}
                 </div>
 
-                {/* Phone number field */}
                 <div
                   className={`form-group ${
                     validationErrors.phoneNo ? "has-error" : ""
@@ -328,7 +297,6 @@ const EmployeeForm: React.FC<EmployeeFormProps> = ({
                   </div>
                 </div>
 
-                {/* Role field - manual input like room number */}
                 <div
                   className={`form-group ${
                     validationErrors.role ? "has-error" : ""
@@ -359,7 +327,6 @@ const EmployeeForm: React.FC<EmployeeFormProps> = ({
                   )}
                 </div>
 
-                {/* Base salary field */}
                 <div
                   className={`form-group ${
                     validationErrors.baseSalary ? "has-error" : ""
@@ -398,9 +365,7 @@ const EmployeeForm: React.FC<EmployeeFormProps> = ({
                 </div>
               </div>
 
-              {/* Right column */}
               <div className="form-column">
-                {/* Address field */}
                 <div
                   className={`form-group ${
                     validationErrors.address ? "has-error" : ""
@@ -425,7 +390,6 @@ const EmployeeForm: React.FC<EmployeeFormProps> = ({
                   )}
                 </div>
 
-                {/* Join date field */}
                 <div
                   className={`form-group ${
                     validationErrors.joinDate ? "has-error" : ""
@@ -460,7 +424,6 @@ const EmployeeForm: React.FC<EmployeeFormProps> = ({
                   </div>
                 </div>
 
-                {/* Status field */}
                 <div className="form-group">
                   <label className="form-label">
                     <i className="bi bi-toggle-on"></i> Status
@@ -484,7 +447,6 @@ const EmployeeForm: React.FC<EmployeeFormProps> = ({
                   </div>
                 </div>
 
-                {/* Employee preview card */}
                 <div className="employee-preview-card">
                   <h4 className="preview-title">Employee Preview</h4>
                   <div className="preview-content">
@@ -545,7 +507,6 @@ const EmployeeForm: React.FC<EmployeeFormProps> = ({
               </div>
             </div>
 
-            {/* Form action buttons */}
             <div className="form-actions">
               <button
                 type="button"
@@ -587,7 +548,6 @@ const EmployeeForm: React.FC<EmployeeFormProps> = ({
         </div>
       </div>
 
-      {/* Success toast notification */}
       {showSuccessToast && (
         <div className="toast-container">
           <div className="toast-notification success">

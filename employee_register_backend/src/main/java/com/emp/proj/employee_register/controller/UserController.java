@@ -1,12 +1,21 @@
 package com.emp.proj.employee_register.controller;
 
+import java.util.List;
+
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.DeleteMapping;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.PutMapping;
+import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RestController;
+
 import com.emp.proj.employee_register.entities.User;
 import com.emp.proj.employee_register.services.IUserService;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.*;
-import org.springframework.http.HttpStatus;
-import java.util.List;
 
 @RestController
 @RequestMapping("/api/v1/users")
@@ -39,16 +48,13 @@ public class UserController {
     public ResponseEntity<User> addUser(@RequestBody User user) {
         try {
             System.out.println("addUser called for Username: " + user.getUserName());
-            // Implement any additional validations or calculations here if needed
-
-            // Save user information
             User savedUser = userService.addUser(user);
             System.out.println("User saved with ID: " + savedUser.getUserId());
 
             return ResponseEntity.status(HttpStatus.CREATED).body(savedUser);
         } catch (Exception e) {
             System.err.println("Error adding user: " + e.getMessage());
-            throw e; // Let Spring handle the error response
+            throw e;
         }
     }
 
@@ -57,7 +63,7 @@ public class UserController {
         try {
             System.out.println("updateUser called for ID: " + id);
 
-            user.setUserId(id); // Ensure the ID matches the path variable
+            user.setUserId(id);
             User updatedUser = userService.updateUser(user);
             System.out.println("User updated with ID: " + updatedUser.getUserId());
 
@@ -70,8 +76,8 @@ public class UserController {
 
     @DeleteMapping("/{id}")
     public ResponseEntity<Void> deleteUser(@PathVariable int id) {
-        if (userService.deleteUser(id)) {  // Changed from deleteUserById to deleteUser
-            return ResponseEntity.noContent().build(); // HTTP 204
+        if (userService.deleteUser(id)) {  
+            return ResponseEntity.noContent().build();
         }
         return ResponseEntity.status(HttpStatus.NOT_FOUND).build();
     }

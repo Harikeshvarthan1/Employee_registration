@@ -19,14 +19,12 @@ interface CalendarDay {
 }
 
 const AttendanceList: React.FC = () => {
-  // State for attendance data
   const [attendances, setAttendances] = useState<Attendance[]>([]);
   const [filteredAttendances, setFilteredAttendances] = useState<Attendance[]>([]);
   const [employees, setEmployees] = useState<Employee[]>([]);
   const [monthlyData, setMonthlyData] = useState<CalendarDay[]>([]);
   const [attendanceSummary, setAttendanceSummary] = useState<AttendanceSummary | null>(null);
 
-  // UI state
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
   const [view, setView] = useState<'calendar' | 'list' | 'summary'>('calendar');
@@ -38,7 +36,6 @@ const AttendanceList: React.FC = () => {
   const [selectAllChecked, setSelectAllChecked] = useState<boolean>(false);
   const [showExportOptions, setShowExportOptions] = useState<boolean>(false);
   
-  // Filter state
   const [filters, setFilters] = useState({
     employeeId: 0,
     status: 'all',
@@ -50,21 +47,17 @@ const AttendanceList: React.FC = () => {
   const calendarRef = useRef<HTMLDivElement>(null);
   const navigate = useNavigate();
   
-  // Load data when component mounts
   useEffect(() => {
     const fetchData = async () => {
       setLoading(true);
       setError(null);
       
       try {
-        // Fetch active employees
         const employeesData = await getAllActiveEmployees();
         setEmployees(employeesData);
         
-        // Fetch all attendance records
         const attendanceData = await getAllAttendance();
         
-        // Enhance attendance data with employee names
         const enhancedAttendance = attendanceData.map(attendance => {
           const employee = employeesData.find(emp => emp.id === attendance.employeeId);
           return {
@@ -76,7 +69,6 @@ const AttendanceList: React.FC = () => {
         setAttendances(enhancedAttendance);
         setFilteredAttendances(enhancedAttendance);
         
-        // Generate calendar data for current month
         generateCalendarData(enhancedAttendance, currentMonth);
       } catch (error: any) {
         console.error('Error loading attendance data:', error);
@@ -89,26 +81,21 @@ const AttendanceList: React.FC = () => {
     fetchData();
   }, []);
 
-  // Update filtered attendance when filters change
   useEffect(() => {
     applyFilters();
   }, [filters, attendances]);
   
-  // Apply filters to attendance data
   const applyFilters = useCallback(() => {
     let filtered = [...attendances];
     
-    // Filter by employee
     if (filters.employeeId > 0) {
       filtered = filtered.filter(att => att.employeeId === filters.employeeId);
     }
     
-    // Filter by status
     if (filters.status !== 'all') {
       filtered = filtered.filter(att => att.status === filters.status);
     }
     
-    // Filter by date range
     if (filters.fromDate) {
       const fromDate = new Date(filters.fromDate);
       filtered = filtered.filter(att => new Date(att.date) >= fromDate);
@@ -116,11 +103,10 @@ const AttendanceList: React.FC = () => {
     
     if (filters.toDate) {
       const toDate = new Date(filters.toDate);
-      toDate.setHours(23, 59, 59, 999); // End of day
+      toDate.setHours(23, 59, 59, 999);
       filtered = filtered.filter(att => new Date(att.date) <= toDate);
     }
     
-    // Filter by search term
     if (filters.searchTerm) {
       const term = filters.searchTerm.toLowerCase();
       filtered = filtered.filter(att => 
@@ -132,50 +118,33 @@ const AttendanceList: React.FC = () => {
     
     setFilteredAttendances(filtered);
     
-    // Generate calendar data when filters change
     if (view === 'calendar') {
       generateCalendarData(filtered, currentMonth);
     }
     
-    // Update summary data
     calculateSummary(filtered);
     
-    // Reset selection when filters change
     setSelectedAttendances([]);
     setSelectAllChecked(false);
     
   }, [attendances, filters, currentMonth, view]);
 
-  // Generate calendar data for the specified month
   const generateCalendarData = (attData: Attendance[], month: Date) => {
     const year = month.getFullYear();
     const monthIndex = month.getMonth();
     
-    // First day of the month
     const firstDayOfMonth = new Date(year, monthIndex, 1);
-    
-    // Last day of the month
     const lastDayOfMonth = new Date(year, monthIndex + 1, 0);
-    
-    // First day of the calendar grid (may include days from previous month)
-    // Get the start of the week containing the first day of the month
     const firstDayOfCalendar = new Date(firstDayOfMonth);
     const dayOfWeek = firstDayOfCalendar.getDay();
     firstDayOfCalendar.setDate(firstDayOfCalendar.getDate() - dayOfWeek);
-    
-    // Last day of the calendar grid (may include days from next month)
-    // Get the end of the week containing the last day of the month
     const lastDayOfCalendar = new Date(lastDayOfMonth);
     const lastDayOfWeek = lastDayOfCalendar.getDay();
     lastDayOfCalendar.setDate(lastDayOfCalendar.getDate() + (6 - lastDayOfWeek));
-    
-    // Generate calendar days
     const days: CalendarDay[] = [];
     const today = new Date();
     today.setHours(0, 0, 0, 0);
-    
     let currentDay = new Date(firstDayOfCalendar);
-    
     while (currentDay <= lastDayOfCalendar) {
       const dayAttendances = attData.filter(att => {
         const attDate = new Date(att.date);
@@ -202,7 +171,6 @@ const AttendanceList: React.FC = () => {
     setMonthlyData(days);
   };
   
-  // Calculate attendance summary
   const calculateSummary = (data: Attendance[]) => {
     if (!data.length) {
       setAttendanceSummary(null);
@@ -212,31 +180,20 @@ const AttendanceList: React.FC = () => {
     const currentDate = new Date();
     const currentMonth = currentDate.getMonth();
     const currentYear = currentDate.getFullYear();
-    
-    // Filter attendance for current month
     const currentMonthAttendance = data.filter(att => {
       const attDate = new Date(att.date);
       return attDate.getMonth() === currentMonth && attDate.getFullYear() === currentYear;
     });
-    
-    // Count days by status
     const presentDays = currentMonthAttendance.filter(att => att.status === 'present').length;
     const absentDays = currentMonthAttendance.filter(att => att.status === 'absent').length;
     const halfDays = currentMonthAttendance.filter(att => att.status === 'halfday').length;
     const overtimeDays = currentMonthAttendance.filter(att => att.status === 'overtime').length;
-    
-    // Calculate total overtime salary
     const totalOvertimeSalary = currentMonthAttendance.reduce((total, att) => 
       total + (att.overtimeSalary || 0), 0);
-
-    // Calculate total overtime hours
     const totalOvertimeHours = currentMonthAttendance.reduce((total, att) =>
       total + (att.overtimeHours || 0), 0);
-
-    // Calculate total salary
     const totalSalary = currentMonthAttendance.reduce((total, att) => 
       total + (att.totalSalary || 0), 0);
-    
     setAttendanceSummary({
       employeeId: filters.employeeId || 0,
       month: currentMonth,
@@ -252,7 +209,6 @@ const AttendanceList: React.FC = () => {
     });
   };
   
-  // Handle next and previous month navigation
   const changeMonth = (direction: 'prev' | 'next') => {
     const newMonth = new Date(currentMonth);
     if (direction === 'prev') {
@@ -264,13 +220,10 @@ const AttendanceList: React.FC = () => {
     generateCalendarData(filteredAttendances, newMonth);
   };
   
-  // Jump to today
   const goToToday = () => {
     const today = new Date();
     setCurrentMonth(today);
     generateCalendarData(filteredAttendances, today);
-    
-    // Scroll to today's date in the calendar
     if (calendarRef.current) {
       const todayEl = calendarRef.current.querySelector('.calendar-day.today');
       if (todayEl) {
@@ -279,7 +232,6 @@ const AttendanceList: React.FC = () => {
     }
   };
   
-  // Reset all filters
   const resetFilters = () => {
     setFilters({
       employeeId: 0,
@@ -290,7 +242,6 @@ const AttendanceList: React.FC = () => {
     });
   };
   
-  // Handle filter changes
   const handleFilterChange = (e: React.ChangeEvent<HTMLSelectElement | HTMLInputElement>) => {
     const { name, value } = e.target;
     setFilters(prev => ({
@@ -299,19 +250,14 @@ const AttendanceList: React.FC = () => {
     }));
   };
   
-  // Delete attendance record
   const handleDelete = async () => {
     if (!attendanceToDelete) return;
     
     setLoading(true);
     try {
       await deleteAttendance(attendanceToDelete.id!);
-      
-      // Update local state
       setAttendances(prev => prev.filter(att => att.id !== attendanceToDelete.id));
       setFilteredAttendances(prev => prev.filter(att => att.id !== attendanceToDelete.id));
-      
-      // Close modal
       setShowDeleteModal(false);
       setAttendanceToDelete(null);
     } catch (error: any) {
@@ -321,13 +267,11 @@ const AttendanceList: React.FC = () => {
     }
   };
   
-  // Confirm delete
   const confirmDelete = (attendance: Attendance) => {
     setAttendanceToDelete(attendance);
     setShowDeleteModal(true);
   };
   
-  // Handle bulk selection
   const toggleSelection = (attendance: Attendance) => {
     if (selectedAttendances.some(att => att.id === attendance.id)) {
       setSelectedAttendances(prev => prev.filter(att => att.id !== attendance.id));
@@ -336,7 +280,6 @@ const AttendanceList: React.FC = () => {
     }
   };
   
-  // Toggle select all
   const toggleSelectAll = () => {
     if (selectAllChecked) {
       setSelectedAttendances([]);
@@ -346,23 +289,17 @@ const AttendanceList: React.FC = () => {
     setSelectAllChecked(!selectAllChecked);
   };
   
-  // Handle bulk delete
   const handleBulkDelete = async () => {
     if (!selectedAttendances.length) return;
     
     setLoading(true);
     try {
-      // Delete all selected attendance records
       await Promise.all(
         selectedAttendances.map(att => deleteAttendance(att.id!))
       );
-      
-      // Update local state
       const selectedIds = selectedAttendances.map(att => att.id);
       setAttendances(prev => prev.filter(att => !selectedIds.includes(att.id)));
       setFilteredAttendances(prev => prev.filter(att => !selectedIds.includes(att.id)));
-      
-      // Reset selection
       setSelectedAttendances([]);
       setSelectAllChecked(false);
       setShowBulkActionPanel(false);
@@ -373,30 +310,24 @@ const AttendanceList: React.FC = () => {
     }
   };
   
-  // Export attendance data
   const exportData = (format: 'csv' | 'pdf' | 'excel') => {
-    // Mock export functionality
     alert(`Exporting attendance data in ${format.toUpperCase()} format`);
     setShowExportOptions(false);
   };
   
-  // Navigate to add attendance page
   const navigateToAddAttendance = () => {
     navigate('/attendance/add');
   };
   
-  // Navigate to edit attendance page
   const navigateToEditAttendance = (attendance: Attendance) => {
     navigate(`/attendance/edit/${attendance.id}`);
   };
   
-  // Render month name
   const renderMonthYear = () => {
     const options = { month: 'long', year: 'numeric' } as Intl.DateTimeFormatOptions;
     return currentMonth.toLocaleDateString('en-US', options);
   };
   
-  // Get status color and icon
   const getStatusInfo = (status: string) => {
     switch (status) {
       case 'present':
@@ -412,7 +343,6 @@ const AttendanceList: React.FC = () => {
     }
   };
 
-  // Render attendance dot indicators for calendar
   const renderAttendanceDots = (attendances: Attendance[]) => {
     if (!attendances.length) return null;
     
@@ -449,7 +379,6 @@ const AttendanceList: React.FC = () => {
     );
   };
   
-  // Render a badge for attendance status
   const renderStatusBadge = (status: string) => {
     const statusInfo = getStatusInfo(status);
     return (
@@ -460,16 +389,14 @@ const AttendanceList: React.FC = () => {
     );
   };
   
-  // Get day of week abbreviation
   const getDayOfWeek = (dayIndex: number) => {
     const days = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
     return days[dayIndex];
   };
   
-  // Check if a date is a weekend
   const isWeekend = (date: Date) => {
     const day = date.getDay();
-    return day === 0 || day === 6; // Sunday or Saturday
+    return day === 0 || day === 6;
   };
 
   return (

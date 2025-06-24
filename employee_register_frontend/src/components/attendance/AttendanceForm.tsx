@@ -24,15 +24,13 @@ const AttendanceForm: React.FC<AttendanceFormProps> = ({
   initialDate,
   employeeId: initialEmployeeId
 }) => {
-  // Form data state with properly typed status
   const [formData, setFormData] = useState<AttendanceFormData>({
     employeeId: initialEmployeeId || 0,
     date: initialDate || formatDateForApi(new Date()),
-    status: 'present', // One of the allowed values
+    status: 'present',
     description: '',
   });
 
-  // Form utilities and UI states
   const [employees, setEmployees] = useState<Employee[]>([]);
   const [loading, setLoading] = useState<boolean>(false);
   const [loadingEmployees, setLoadingEmployees] = useState<boolean>(true);
@@ -43,20 +41,16 @@ const AttendanceForm: React.FC<AttendanceFormProps> = ({
   const [selectedEmployee, setSelectedEmployee] = useState<Employee | null>(null);
   const [animateStatus, setAnimateStatus] = useState<boolean>(false);
 
-  // References
   const navigate = useNavigate();
   const formRef = useRef<HTMLFormElement>(null);
   const statusContainerRef = useRef<HTMLDivElement>(null);
 
-  // Load active employees on component mount
   useEffect(() => {
     const loadEmployees = async () => {
       setLoadingEmployees(true);
       try {
         const activeEmployees = await getAllActiveEmployees();
         setEmployees(activeEmployees);
-        
-        // Set the selected employee if initialEmployeeId is provided
         if (initialEmployeeId) {
           const employee = activeEmployees.find(emp => emp.id === initialEmployeeId);
           if (employee) {
@@ -73,7 +67,6 @@ const AttendanceForm: React.FC<AttendanceFormProps> = ({
     loadEmployees();
   }, [initialEmployeeId]);
 
-  // Check if attendance record already exists when employee or date changes
   useEffect(() => {
     const checkExistingAttendance = async () => {
       if (formData.employeeId && formData.date) {
@@ -99,7 +92,6 @@ const AttendanceForm: React.FC<AttendanceFormProps> = ({
     checkExistingAttendance();
   }, [formData.employeeId, formData.date]);
 
-  // Animate status change
   useEffect(() => {
     if (animateStatus) {
       const timer = setTimeout(() => {
@@ -109,50 +101,38 @@ const AttendanceForm: React.FC<AttendanceFormProps> = ({
     }
   }, [animateStatus]);
 
-  // Handle form input changes
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => {
     const { name, value } = e.target;
-    
-    // For employee selection, update selected employee
     if (name === 'employeeId') {
       const employeeId = parseInt(value, 10);
       const employee = employees.find(emp => emp.id === employeeId);
       setSelectedEmployee(employee || null);
-      
       setFormData(prev => ({
         ...prev,
         [name]: employeeId
       }));
     } 
-    // For status selection, ensure it's one of the allowed values
     else if (name === 'status') {
-      // Type assertion to ensure value is one of the allowed status values
       const statusValue = value as 'present' | 'absent' | 'overtime' | 'halfday';
-      
       setAnimateStatus(true);
       setFormData(prev => ({
         ...prev,
         status: statusValue,
-        // Clear overtime fields if status is not overtime
         ...(statusValue !== 'overtime' ? { overtimeDescription: '', overtimeSalary: undefined } : {})
       }));
     } 
-    // For overtime salary, parse as number
     else if (name === 'overtimeSalary') {
       setFormData(prev => ({
         ...prev,
         [name]: value ? parseFloat(value) : undefined
       }));
     }
-    // For all other fields
     else {
       setFormData(prev => ({
         ...prev,
         [name]: value
       }));
     }
-
-    // Clear field-specific error
     if (errors[name]) {
       const newErrors = { ...errors };
       delete newErrors[name];
@@ -160,7 +140,6 @@ const AttendanceForm: React.FC<AttendanceFormProps> = ({
     }
   };
 
-  // Validate the form
   const validate = (): boolean => {
     const newErrors: Record<string, string> = {};
 
@@ -194,13 +173,10 @@ const AttendanceForm: React.FC<AttendanceFormProps> = ({
     return Object.keys(newErrors).length === 0;
   };
 
-
-  // Handle form submission
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
     if (!validate()) {
-      // Smooth scroll to the first error
       const firstErrorEl = document.querySelector('.error-text');
       if (firstErrorEl) {
         firstErrorEl.scrollIntoView({ behavior: 'smooth', block: 'center' });
@@ -216,13 +192,10 @@ const AttendanceForm: React.FC<AttendanceFormProps> = ({
     await submitAttendance();
   };
 
-  // Submit attendance data to API
   const submitAttendance = async () => {
     setLoading(true);
     try {
       await addAttendance(formData);
-      
-      // Show success animation
       setShowSuccess(true);
       setTimeout(() => {
         setShowSuccess(false);
@@ -242,7 +215,6 @@ const AttendanceForm: React.FC<AttendanceFormProps> = ({
     }
   };
 
-  // Cancel form and go back
   const handleCancel = () => {
     if (onCancel) {
       onCancel();
@@ -251,19 +223,16 @@ const AttendanceForm: React.FC<AttendanceFormProps> = ({
     }
   };
 
-  // Get the current date (for max date constraint)
   const getCurrentDate = () => {
     return new Date().toISOString().split('T')[0];
   };
 
-  // Generate classes for status options
   const getStatusClasses = (status: 'present' | 'absent' | 'overtime' | 'halfday') => {
     return `status-option ${formData.status === status ? 'active' : ''} ${animateStatus && formData.status === status ? 'animate' : ''}`;
   };
 
   return (
     <div className="attendance-form-container">
-      {/* Success overlay */}
       {showSuccess && (
         <div className="success-overlay">
           <div className="success-animation">
@@ -275,7 +244,6 @@ const AttendanceForm: React.FC<AttendanceFormProps> = ({
         </div>
       )}
 
-      {/* Form card */}
       <div className="attendance-form-card">
         <div className="card-header">
           <h2>
@@ -286,7 +254,6 @@ const AttendanceForm: React.FC<AttendanceFormProps> = ({
 
         <form ref={formRef} onSubmit={handleSubmit}>
           <div className="card-body">
-            {/* General error message */}
             {errors.general && (
               <div className="error-banner">
                 <i className="bi bi-exclamation-triangle"></i>
@@ -300,7 +267,6 @@ const AttendanceForm: React.FC<AttendanceFormProps> = ({
               </div>
             )}
 
-            {/* Employee selection */}
             <div className={`form-group ${errors.employeeId ? 'has-error' : ''}`}>
               <label htmlFor="employeeId">
                 <i className="bi bi-person"></i> Select Employee <span className="required">*</span>
@@ -357,7 +323,6 @@ const AttendanceForm: React.FC<AttendanceFormProps> = ({
               )}
             </div>
 
-            {/* Date selection */}
             <div className={`form-group ${errors.date ? 'has-error' : ''}`}>
               <label htmlFor="date">
                 <i className="bi bi-calendar"></i> Attendance Date <span className="required">*</span>
@@ -378,7 +343,6 @@ const AttendanceForm: React.FC<AttendanceFormProps> = ({
               <div className="form-hint">Select the date for recording attendance</div>
             </div>
 
-            {/* Status selection */}
             <div className={`form-group ${errors.status ? 'has-error' : ''}`}>
               <label>
                 <i className="bi bi-check-circle"></i> Attendance Status <span className="required">*</span>
@@ -457,7 +421,6 @@ const AttendanceForm: React.FC<AttendanceFormProps> = ({
               {errors.status && <div className="error-text">{errors.status}</div>}
             </div>
 
-            {/* Conditional overtime fields */}
             {formData.status === 'overtime' && (
               <div className="overtime-section">
                 <div className={`form-group ${errors.overtimeDescription ? 'has-error' : ''}`}>
@@ -501,7 +464,6 @@ const AttendanceForm: React.FC<AttendanceFormProps> = ({
               </div>
             )}
 
-            {/* Additional description */}
             <div className="form-group">
               <label htmlFor="description">
                 <i className="bi bi-card-text"></i> Additional Notes
@@ -516,7 +478,6 @@ const AttendanceForm: React.FC<AttendanceFormProps> = ({
               />
             </div>
 
-            {/* Status preview */}
             <div className="status-preview">
               <div className={`preview-badge ${formData.status}`}>
                 {formData.status === 'present' && <><i className="bi bi-check-circle-fill"></i> Present</>}
@@ -538,7 +499,6 @@ const AttendanceForm: React.FC<AttendanceFormProps> = ({
             </div>
           </div>
 
-          {/* Form actions */}
           <div className="card-footer">
             <button 
               type="button" 
@@ -569,7 +529,6 @@ const AttendanceForm: React.FC<AttendanceFormProps> = ({
         </form>
       </div>
 
-      {/* Confirm modal for overwriting existing record */}
       {showConfirmModal && (
         <div className="modal-overlay">
           <div className="confirm-modal">
