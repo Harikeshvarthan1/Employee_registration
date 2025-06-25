@@ -1,7 +1,9 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { getAllSalaries, addSalary, deleteSalary, updateSalary } from '.././apis/salaryApi';
 import { getAllActiveEmployees } from '.././apis/employeeApi';
-import type { Employee, Salary } from '.././models/types';
+import { getActiveLoansByEmployeeId } from '.././apis/loanRegistrationApi';
+import { addRepayment, getTotalRepaidForLoan } from '.././apis/loanRepayApi';
+import type { Employee, Salary, LoanRegistration } from '.././models/types';
 import { formatCurrency, formatDate, getMonthName } from '../utils/dateUtils';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Cell } from 'recharts';
 import './SalaryPage.css';
@@ -11,6 +13,13 @@ const SalaryPage: React.FC = () => {
   const [salaries, setSalaries] = useState<Salary[]>([]);
   const [employees, setEmployees] = useState<Employee[]>([]);
   const [filteredSalaries, setFilteredSalaries] = useState<Salary[]>([]);
+  
+  // Loan-related states
+  const [] = useState<LoanRegistration[]>([]);
+  const [selectedEmployeeLoans, setSelectedEmployeeLoans] = useState<LoanRegistration[]>([]);
+  const [loanRepayments, setLoanRepayments] = useState<{[key: number]: number}>({});
+  const [loanBalances, setLoanBalances] = useState<{[key: number]: number}>({});
+  const [showLoanPayment, setShowLoanPayment] = useState<boolean>(false);
 
   // UI states
   const [isLoading, setIsLoading] = useState<boolean>(true);
@@ -59,12 +68,17 @@ const SalaryPage: React.FC = () => {
     paymentType: 'salary' | 'daily_credit';
     amount: number;
     lastSalaryDate: string;
+    // Loan payment fields
+    totalLoanRepayment: number;
+    netSalary: number;
   }>({
     employeeId: '',
     datePaid: new Date().toISOString().split('T')[0],
     paymentType: 'salary',
     amount: 0,
-    lastSalaryDate: ''
+    lastSalaryDate: '',
+    totalLoanRepayment: 0,
+    netSalary: 0
   });
 
   // Refs
@@ -150,6 +164,51 @@ const SalaryPage: React.FC = () => {
       // This will keep the loading state active
     }
   };
+
+  // Load employee loans when employee is selected
+  const loadEmployeeLoans = async (employeeId: number) => {
+    try {
+      const loans = await getActiveLoansByEmployeeId(employeeId);
+      setSelectedEmployeeLoans(loans);
+      
+      // Calculate loan balances
+      const balances: {[key: number]: number} = {};
+      for (const loan of loans) {
+        if (loan.loanId) {
+          try {
+            const totalRepaid = await getTotalRepaidForLoan(loan.loanId);
+            balances[loan.loanId] = loan.loanAmount - totalRepaid;
+          } catch (error) {
+            balances[loan.loanId] = loan.loanAmount;
+          }
+        }
+      }
+      setLoanBalances(balances);
+      
+      // Show loan payment section if there are active loans
+      setShowLoanPayment(loans.length > 0);
+      
+      // Reset loan repayments
+      setLoanRepayments({});
+      
+    } catch (error) {
+      console.error('Error loading employee loans:', error);
+      setSelectedEmployeeLoans([]);
+      setShowLoanPayment(false);
+    }
+  };
+
+  // Calculate totals when loan repayments change
+  useEffect(() => {
+    const totalLoanRepayment = Object.values(loanRepayments).reduce((sum, amount) => sum + amount, 0);
+    const netSalary = formData.amount - totalLoanRepayment;
+    
+    setFormData(prev => ({
+      ...prev,
+      totalLoanRepayment,
+      netSalary
+    }));
+  }, [loanRepayments, formData.amount]);
 
   // Apply filters to the salary data
   const applyFilters = useCallback(() => {
@@ -296,7 +355,7 @@ const SalaryPage: React.FC = () => {
   };
 
   // Handle form input changes
-  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
+  const handleInputChange = async (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
     const { name, value, type } = e.target;
 
     let processedValue: string | number = value;
@@ -308,6 +367,26 @@ const SalaryPage: React.FC = () => {
       ...formData,
       [name]: processedValue
     } as any);
+
+    // Load loans when employee is selected
+    if (name === 'employeeId' && value && value !== '') {
+      await loadEmployeeLoans(Number(value));
+    } else if (name === 'employeeId' && (!value || value === '')) {
+      setSelectedEmployeeLoans([]);
+      setShowLoanPayment(false);
+      setLoanRepayments({});
+    }
+  };
+
+  // Handle loan repayment amount change
+  const handleLoanRepaymentChange = (loanId: number, amount: number) => {
+    const maxAmount = Math.min(loanBalances[loanId] || 0, formData.amount || 0);
+    const validAmount = Math.max(0, Math.min(amount, maxAmount));
+    
+    setLoanRepayments(prev => ({
+      ...prev,
+      [loanId]: validAmount
+    }));
   };
 
   // Handle form submission for adding new salary
@@ -315,6 +394,13 @@ const SalaryPage: React.FC = () => {
     e.preventDefault();
 
     if (!formData.employeeId || !formData.datePaid || formData.amount <= 0) {
+      return;
+    }
+
+    // Validate loan repayments don't exceed salary amount
+    const totalLoanRepayment = Object.values(loanRepayments).reduce((sum, amount) => sum + amount, 0);
+    if (totalLoanRepayment > formData.amount) {
+      setError('Total loan repayments cannot exceed salary amount');
       return;
     }
 
@@ -341,13 +427,31 @@ const SalaryPage: React.FC = () => {
       
       const newSalary = await addSalary(salaryToAdd);
       
+      // Process loan repayments if any
+      const loanRepaymentPromises = Object.entries(loanRepayments)
+        .filter(([_, amount]) => amount > 0)
+        .map(([loanId, amount]) => {
+          return addRepayment({
+            loanId: Number(loanId),
+            employeeId: Number(formData.employeeId),
+            repayAmount: amount,
+            repayDate: formData.datePaid
+          });
+        });
+
+      if (loanRepaymentPromises.length > 0) {
+        await Promise.all(loanRepaymentPromises);
+      }
+      
       // Update local state
       setSalaries([newSalary, ...salaries]);
       
       // Show success message
-      setSuccessMessage('Salary payment added successfully!');
+      const loanMessage = totalLoanRepayment > 0 ? 
+        ` with ${formatCurrency(totalLoanRepayment)} loan repayment` : '';
+      setSuccessMessage(`Salary payment of ${formatCurrency(formData.amount)} added successfully${loanMessage}!`);
       setShowSuccessToast(true);
-      setTimeout(() => setShowSuccessToast(false), 3000);
+      setTimeout(() => setShowSuccessToast(false), 4000);
       
       // Reset form
       setFormData({
@@ -355,8 +459,14 @@ const SalaryPage: React.FC = () => {
         datePaid: new Date().toISOString().split('T')[0],
         paymentType: 'salary',
         amount: 0,
-        lastSalaryDate: ''
+        lastSalaryDate: '',
+        totalLoanRepayment: 0,
+        netSalary: 0
       });
+      setSelectedEmployeeLoans([]);
+      setShowLoanPayment(false);
+      setLoanRepayments({});
+      setLoanBalances({});
       
       // Switch to history tab
       setActiveTab('history');
@@ -1274,40 +1384,207 @@ const SalaryPage: React.FC = () => {
                       Optional. If not specified, will default to one month before payment date.
                     </div>
                   </div>
-                  
-                  {/* Payment Preview */}
-                  {formData.employeeId && (
-                    <div className="payment-preview">
-                      <h3>Payment Preview</h3>
-                      <div className="preview-details">
-                        <div className="preview-row">
-                          <span className="preview-label">Employee:</span>
-                          <span className="preview-value">
-                            {typeof formData.employeeId === 'number' ? getEmployeeName(formData.employeeId) : ''}
-                          </span>
-                        </div>
-                        <div className="preview-row">
-                          <span className="preview-label">Payment Type:</span>
-                          <span className="preview-value">
-                            {formData.paymentType === 'salary' ? 'Monthly Salary' : 'Daily Credit'}
-                          </span>
-                        </div>
-                        <div className="preview-row">
-                          <span className="preview-label">Amount:</span>
-                          <span className="preview-value amount">
-                            {formatCurrency(formData.amount)}
-                          </span>
-                        </div>
-                        <div className="preview-row">
-                          <span className="preview-label">Payment Date:</span>
-                          <span className="preview-value">
-                            {formData.datePaid ? formatDate(formData.datePaid) : 'Not specified'}
-                          </span>
+                </div>
+
+                {/* Loan Repayment Section - Modified condition */}
+                {showLoanPayment && selectedEmployeeLoans.length > 0 && (
+                  <div className="loan-payment-section">
+                    <div className="section-header">
+                      <h3><i className="bi bi-bank"></i> Active Loans - Repayment Options</h3>
+                      <p>This employee has active loans. You can allocate part of the salary towards loan repayment.</p>
+                    </div>
+                    
+                    <div className="loans-container">
+                      {selectedEmployeeLoans.map((loan) => {
+                        const remainingBalance = loanBalances[loan.loanId!] || loan.loanAmount;
+                        const maxRepayment = Math.min(remainingBalance, formData.amount - formData.totalLoanRepayment + (loanRepayments[loan.loanId!] || 0));
+                        
+                        return (
+                          <div key={loan.loanId} className="loan-card">
+                            <div className="loan-header">
+                              <div className="loan-info">
+                                <h4>
+                                  <i className="bi bi-credit-card-2-front"></i>
+                                  Loan #{loan.loanId}
+                                </h4>
+                                <span className="loan-date">
+                                  Issued: {formatDate(loan.loanDate)}
+                                </span>
+                              </div>
+                              <div className="loan-status">
+                                <span className="badge active">Active</span>
+                              </div>
+                            </div>
+                            
+                            <div className="loan-details">
+                              <div className="loan-amounts">
+                                <div className="amount-item">
+                                  <span className="amount-label">Original Amount:</span>
+                                  <span className="amount-value original">
+                                    {formatCurrency(loan.loanAmount)}
+                                  </span>
+                                </div>
+                                <div className="amount-item">
+                                  <span className="amount-label">Remaining Balance:</span>
+                                  <span className="amount-value remaining">
+                                    {formatCurrency(remainingBalance)}
+                                  </span>
+                                </div>
+                              </div>
+                              
+                              <div className="loan-reason">
+                                <span className="reason-label">Reason:</span>
+                                <span className="reason-text">{loan.reason}</span>
+                              </div>
+                            </div>
+                            
+                            <div className="repayment-controls">
+                              <div className="repayment-input-group">
+                                <label htmlFor={`loan-${loan.loanId}`}>
+                                  <i className="bi bi-cash-coin"></i> Repayment Amount
+                                </label>
+                                <div className="repayment-input-container">
+                                  <span className="currency-symbol">₹</span>
+                                  <input
+                                    type="number"
+                                    id={`loan-${loan.loanId}`}
+                                    className="form-control repayment-input"
+                                    value={loanRepayments[loan.loanId!] || 0}
+                                    onChange={(e) => handleLoanRepaymentChange(
+                                      loan.loanId!, 
+                                      parseFloat(e.target.value) || 0
+                                    )}
+                                    min="0"
+                                    max={maxRepayment}
+                                    step="0.01"
+                                    placeholder="0.00"
+                                    disabled={formData.amount <= 0}
+                                  />
+                                  <button
+                                    type="button"
+                                    className="btn btn-outline btn-sm max-button"
+                                    onClick={() => handleLoanRepaymentChange(loan.loanId!, maxRepayment)}
+                                    disabled={maxRepayment <= 0 || formData.amount <= 0}
+                                  >
+                                    Max
+                                  </button>
+                                </div>
+                                <div className="repayment-info">
+                                  <small>
+                                    {formData.amount > 0 ? (
+                                      <>Max available: {formatCurrency(maxRepayment)}</>
+                                    ) : (
+                                      <>Enter salary amount to set repayment</>
+                                    )}
+                                  </small>
+                                </div>
+                              </div>
+                              
+                              {loanRepayments[loan.loanId!] > 0 && (
+                                <div className="repayment-summary">
+                                  <div className="summary-row">
+                                    <span>Repayment Amount:</span>
+                                    <span className="repayment-amount">
+                                      {formatCurrency(loanRepayments[loan.loanId!])}
+                                    </span>
+                                  </div>
+                                  <div className="summary-row">
+                                    <span>Remaining After Payment:</span>
+                                    <span className="remaining-amount">
+                                      {formatCurrency(remainingBalance - loanRepayments[loan.loanId!])}
+                                    </span>
+                                  </div>
+                                  {remainingBalance - loanRepayments[loan.loanId!] <= 0 && (
+                                    <div className="loan-completion-notice">
+                                      <i className="bi bi-check-circle-fill"></i>
+                                      <span>This loan will be fully paid off!</span>
+                                    </div>
+                                  )}
+                                </div>
+                              )}
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                    
+                    {/* Loan Payment Summary */}
+                    {formData.totalLoanRepayment > 0 && formData.amount > 0 && (
+                      <div className="loan-payment-summary">
+                        <h4><i className="bi bi-calculator"></i> Payment Summary</h4>
+                        <div className="summary-grid">
+                          <div className="summary-item">
+                            <span className="summary-label">Total Salary:</span>
+                            <span className="summary-value total">
+                              {formatCurrency(formData.amount)}
+                            </span>
+                          </div>
+                          <div className="summary-item">
+                            <span className="summary-label">Total Loan Repayment:</span>
+                            <span className="summary-value loan-repayment">
+                              -{formatCurrency(formData.totalLoanRepayment)}
+                            </span>
+                          </div>
+                          <div className="summary-item net-salary">
+                            <span className="summary-label">Net Take-Home Salary:</span>
+                            <span className="summary-value net">
+                              {formatCurrency(formData.netSalary)}
+                            </span>
+                          </div>
                         </div>
                       </div>
+                    )}
+                  </div>
+                )}
+
+                {/* Payment Preview */}
+                {formData.employeeId && (
+                  <div className="payment-preview">
+                    <h3>Payment Preview</h3>
+                    <div className="preview-details">
+                      <div className="preview-row">
+                        <span className="preview-label">Employee:</span>
+                        <span className="preview-value">
+                          {typeof formData.employeeId === 'number' ? getEmployeeName(formData.employeeId) : ''}
+                        </span>
+                      </div>
+                      <div className="preview-row">
+                        <span className="preview-label">Payment Type:</span>
+                        <span className="preview-value">
+                          {formData.paymentType === 'salary' ? 'Monthly Salary' : 'Daily Credit'}
+                        </span>
+                      </div>
+                      <div className="preview-row">
+                        <span className="preview-label">Gross Amount:</span>
+                        <span className="preview-value amount">
+                          {formatCurrency(formData.amount)}
+                        </span>
+                      </div>
+                      {formData.totalLoanRepayment > 0 && (
+                        <>
+                          <div className="preview-row">
+                            <span className="preview-label">Loan Repayment:</span>
+                            <span className="preview-value loan-deduction">
+                              -{formatCurrency(formData.totalLoanRepayment)}
+                            </span>
+                          </div>
+                          <div className="preview-row net">
+                            <span className="preview-label">Net Take-Home:</span>
+                            <span className="preview-value amount">
+                              {formatCurrency(formData.netSalary)}
+                            </span>
+                          </div>
+                        </>
+                      )}
+                      <div className="preview-row">
+                        <span className="preview-label">Payment Date:</span>
+                        <span className="preview-value">
+                          {formData.datePaid ? formatDate(formData.datePaid) : 'Not specified'}
+                        </span>
+                      </div>
                     </div>
-                  )}
-                </div>
+                  </div>
+                )}
                 
                 {/* Form Actions */}
                 <div className="form-actions">
@@ -1321,7 +1598,7 @@ const SalaryPage: React.FC = () => {
                   <button
                     type="submit"
                     className="btn btn-primary"
-                    disabled={isSubmitting || showLoading}
+                    disabled={isSubmitting || showLoading || formData.amount <= 0 || !formData.employeeId}
                   >
                     {isSubmitting || showLoading ? (
                       <>
@@ -1334,7 +1611,8 @@ const SalaryPage: React.FC = () => {
                       </>
                     ) : (
                       <>
-                        <i className="bi bi-check-circle"></i> Record Payment
+                        <i className="bi bi-check-circle"></i> 
+                        {formData.totalLoanRepayment > 0 ? 'Process Payment & Loan Repayment' : 'Record Payment'}
                       </>
                     )}
                   </button>
@@ -1361,6 +1639,14 @@ const SalaryPage: React.FC = () => {
                   </div>
                   <p>
                     <strong>Daily Credit</strong> is for advances or partial payments made during the month.
+                  </p>
+                </div>
+                <div className="tip-item">
+                  <div className="tip-icon">
+                    <i className="bi bi-bank"></i>
+                  </div>
+                  <p>
+                    <strong>Loan Repayments</strong> are automatically deducted from salary when specified.
                   </p>
                 </div>
                 <div className="tip-item">
@@ -1692,6 +1978,25 @@ const SalaryPage: React.FC = () => {
             className="toast-close"
             onClick={() => setShowSuccessToast(false)}
             aria-label="Close notification"
+          >
+            <i className="bi bi-x"></i>
+          </button>
+        </div>
+      )}
+
+      {/* Error Display */}
+      {error && (
+        <div className="error-toast">
+          <div className="error-icon">
+            <i className="bi bi-exclamation-triangle-fill"></i>
+          </div>
+          <div className="error-content">
+            <p>{error}</p>
+          </div>
+          <button 
+            className="error-close"
+            onClick={() => setError(null)}
+            aria-label="Close error"
           >
             <i className="bi bi-x"></i>
           </button>
